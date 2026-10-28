@@ -1,0 +1,235 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* PRM palette, carried over from the previous design */
+  --color-night: var(--night);
+  --color-night-2: var(--night-2);
+  --color-brand-soft: var(--brand-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-amber-ink: var(--amber-ink);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-sf: var(--sf);
+  --color-body: var(--body);
+  --color-surface-2: var(--surface-2);
+  --color-border-strong: var(--border-strong);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  --night: #102f57;
+  --night-2: #163d70;
+  --brand-soft: #eaf2fd;
+  --amber: #ffb359;
+  --amber-soft: #fff4e5;
+  --amber-ink: #8a4b00;
+  --ok: #1a7f4b;
+  --ok-soft: #e7f6ee;
+  --bad: #b42318;
+  --bad-soft: #fdecea;
+  --sf: #00a1e0;
+  --body: #3f4652;
+  --surface-2: #f8fafc;
+  --border-strong: #cbd5e1;
+
+  --background: #f5f7fb;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --primary: #0969da;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f7;
+  --secondary-foreground: #18181b;
+  --muted: #f1f5f9;
+  --muted-foreground: #5b6779;
+  --accent: #eef3fb;
+  --accent-foreground: #18181b;
+  --destructive: #b42318;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #0969da;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #3f4652;
+  --sidebar-primary: #0969da;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eaf2fd;
+  --sidebar-accent-foreground: #0758b8;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #0969da;
+}
+
+.dark {
+  --night: #0b2140;
+  --night-2: #123158;
+  --brand-soft: #16294a;
+  --amber: #ffb359;
+  --amber-soft: #3a2a12;
+  --amber-ink: #ffcf8f;
+  --ok: #4fd18b;
+  --ok-soft: #123323;
+  --bad: #ff8a80;
+  --bad-soft: #3a1717;
+  --body: #c7d0dd;
+  --surface-2: #1a2740;
+  --border-strong: #33445f;
+
+  --background: #0d1522;
+  --foreground: #eef2f8;
+  --card: #152033;
+  --card-foreground: #eef2f8;
+  --popover: #152033;
+  --popover-foreground: #eef2f8;
+  --primary: #4c9aff;
+  --primary-foreground: #06121f;
+  --secondary: #1a2740;
+  --secondary-foreground: #eef2f8;
+  --muted: #1a2740;
+  --muted-foreground: #9aa6ba;
+  --accent: #1c2c47;
+  --accent-foreground: #eef2f8;
+  --destructive: #ff8a80;
+  --border: #24324a;
+  --input: #33445f;
+  --ring: #4c9aff;
+
+  --sidebar: #111b2b;
+  --sidebar-foreground: #c7d0dd;
+  --sidebar-primary: #4c9aff;
+  --sidebar-primary-foreground: #06121f;
+  --sidebar-accent: #16294a;
+  --sidebar-accent-foreground: #9cc4ff;
+  --sidebar-border: #24324a;
+  --sidebar-ring: #4c9aff;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-background text-body;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  h1, h2, h3, h4 {
+    @apply text-foreground;
+    letter-spacing: -0.01em;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline-color: var(--ring);
+  }
+}
+
+@layer utilities {
+  .tabular { font-variant-numeric: tabular-nums; }
+  .dot-grid {
+    background-image: radial-gradient(#ffffff12 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+}
+
+/* ---------- sign-in card row (same 3D language, laid out horizontally) ---------- */
+.scene { perspective: 1200px; }
+.stage {
+  display: flex;
+  align-items: flex-start;
+  transform-style: preserve-3d;
+  transform: rotateX(14deg) rotateY(-8deg);
+}
+.pane {
+  --z: 0px;
+  --y: 0px;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 188px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 18px 20px;
+  border-radius: 14px;
+  background: linear-gradient(155deg, #2a5288f2, #163762f5);
+  border: 1px solid #ffffff2b;
+  box-shadow: 0 24px 44px #00000059;
+  color: #dfe8f6;
+  transform: translateY(var(--y)) translateZ(var(--z));
+  transition: transform 0.4s ease, border-color 0.4s, box-shadow 0.4s;
+}
+.pane + .pane { margin-left: -14px; }
+.pane.on {
+  border-color: #ffb359;
+  box-shadow: 0 0 0 1px #ffb359, 0 28px 56px #00000073, 0 0 46px #ffb35930;
+  transform: translateY(calc(var(--y) - 10px)) translateZ(calc(var(--z) + 24px));
+  z-index: 2;
+}
+.pane .pk { color: #8fa9cc; }
+.pane .pk i { background: #8fa9cc; }
+.pane.on .pk { color: #ffb359; }
+.pane.on .pk i { background: #ffb359; box-shadow: 0 0 0 4px #ffb35933; }
+.pane.done .pk i { background: #4fd18b; }
+
+@keyframes nudge-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-rise { animation: nudge-in 0.35s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pane, .animate-rise { transition: none; animation: none; }
+}
