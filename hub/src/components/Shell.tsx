@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { AppWindow, BookOpen, CircleAlert, LayoutGrid, Menu, Monitor, Moon, Network, Scale, Search, Sparkles, Sun, Trophy, Users, Workflow } from "lucide-react"
+import { ArrowLeft, BookOpen, CircleAlert, LayoutGrid, Menu, Monitor, Moon, Network, Scale, Search, Sparkles, Sun, Trophy, Users, Workflow } from "lucide-react"
 import { gaps, personas, rules, flows } from "@hub/content"
 import { Sheet, SheetContent, SheetTitle } from "@hub/components/ui/sheet"
 import { useNav, type Page } from "@hub/lib/nav"
@@ -18,26 +18,30 @@ const nav: { page: Page; label: string; icon: typeof Search; count?: number; hin
   { page: "reference", label: "Reference", icon: BookOpen },
 ]
 
-function Brand() {
+function Brand({ compact }: { compact?: boolean }) {
   return (
-    <div className="flex items-center gap-2.5">
-      <svg viewBox="0 0 28 24" className="h-6 w-7 shrink-0" aria-hidden>
+    <div className="flex min-w-0 items-center gap-2.5">
+      <svg viewBox="0 0 28 24" className={cn("shrink-0", compact ? "h-5 w-6" : "h-6 w-7")} aria-hidden>
         <path d="M6 22 11 2M13 22 18 2M20 22 25 2" stroke="#3b8cf5" strokeWidth="3" strokeLinecap="round" />
       </svg>
-      <span className="leading-tight">
-        <b className="block text-[16px] font-extrabold tracking-tight text-white">PRM Knowledge Hub</b>
-        <span className="text-[12.5px] text-night-muted">Single source of truth</span>
+      <span className="min-w-0 leading-tight">
+        <b className={cn("block font-extrabold tracking-tight text-white", compact ? "truncate text-[15px]" : "text-[16px]")}>{compact ? "Knowledge Hub" : "PRM Knowledge Hub"}</b>
+        {!compact && <span className="text-[12.5px] text-night-muted">Single source of truth</span>}
       </span>
     </div>
   )
 }
 
-/** Back to the demo's role picker. The hub opens in its own tab, so the portals keep their state. */
-function PortalsLink() {
+/** Back to the demo's Choose a portal page (the welcome screen). */
+const WELCOME = "../#/welcome"
+
+function BackButton({ className }: { className?: string }) {
   return (
-    <a href="../" className="flex h-11 items-center gap-3 rounded-[10px] px-3 text-[15px] font-medium text-night-ink/85 transition-colors hover:bg-white/6 hover:text-white">
-      <AppWindow className="size-[18px] text-night-muted" />
-      <span className="flex-1">PRM portals</span>
+    <a
+      href={WELCOME}
+      className={cn("inline-flex h-10 items-center gap-2 rounded-[10px] border border-white/15 bg-white/6 pr-4 pl-3 text-[14.5px] font-semibold text-white transition-colors hover:bg-white/12", className)}
+    >
+      <ArrowLeft className="size-4 text-amber" /> Back to portals
     </a>
   )
 }
@@ -108,10 +112,10 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-full lg:grid lg:grid-cols-[272px_minmax(0,1fr)]">
       <aside className="sticky top-0 hidden h-svh flex-col bg-night lg:flex">
-        <div className="map-grid flex-1 overflow-y-auto px-4 pt-6 pb-4">
+        <div className="map-grid flex-1 overflow-y-auto px-4 pt-5 pb-4">
+          <BackButton className="mb-6" />
           <div className="mb-7 px-2"><Brand /></div>
           <NavList />
-          <div className="mt-3 border-t border-white/10 pt-3"><PortalsLink /></div>
         </div>
         <div className="space-y-3 border-t border-white/10 p-4">
           <button onClick={() => askAssistant()} className="flex w-full items-center gap-3 rounded-[12px] bg-white px-4 py-3 text-left text-night transition hover:bg-white/90">
@@ -128,10 +132,13 @@ export function Shell({ children }: { children: ReactNode }) {
 
       <div className="min-w-0">
         <header className="gutter sticky top-0 z-30 flex h-16 items-center gap-2 bg-night lg:hidden" style={{ top: "env(safe-area-inset-top, 0px)" }}>
-          <button onClick={() => setMenu(true)} className="grid size-10 place-items-center rounded-lg text-white hover:bg-white/10" aria-label="Open sections">
+          <a href={WELCOME} className="grid size-10 shrink-0 place-items-center rounded-lg text-white hover:bg-white/10" aria-label="Back to portals" title="Back to portals">
+            <ArrowLeft className="size-5" />
+          </a>
+          <button onClick={() => setMenu(true)} className="grid size-10 shrink-0 place-items-center rounded-lg text-white hover:bg-white/10" aria-label="Open sections">
             <Menu className="size-5" />
           </button>
-          <div className="min-w-0 flex-1"><Brand /></div>
+          <div className="min-w-0 flex-1"><Brand compact /></div>
           <button onClick={() => askAssistant()} className="inline-flex h-10 items-center gap-2 rounded-lg bg-white px-3 text-[14px] font-semibold text-night">
             <Sparkles className="size-4 text-primary" /> Ask
           </button>
@@ -140,9 +147,9 @@ export function Shell({ children }: { children: ReactNode }) {
           <SheetContent side="left" className="w-[290px] border-0 bg-night p-0 text-night-ink">
             <SheetTitle className="sr-only">Sections</SheetTitle>
             <div className="map-grid h-full overflow-y-auto px-4 pt-6 pb-6">
+              <BackButton className="mb-5" />
               <div className="mb-6 px-2"><Brand /></div>
               <NavList onPick={() => setMenu(false)} />
-              <div className="mt-3 border-t border-white/10 pt-3"><PortalsLink /></div>
               <div className="mt-6 border-t border-white/10 px-1 pt-5">
                 <p className="mb-2 px-1 text-[13px] font-semibold text-night-muted">Theme</p>
                 <ThemeSwitch />
