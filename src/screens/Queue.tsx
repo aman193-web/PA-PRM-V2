@@ -13,7 +13,7 @@ import { reviewReasonShort } from "@/data/model"
 import { addDays, ago, date, money, shortDate } from "@/lib/format"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
-import { useQueue, useStore } from "@/store"
+import { slaPct, useQueue, useStore } from "@/store"
 
 const aiLabel = { approve: "Approve", reject: "Reject", request_info: "Ask for info" } as const
 const aiTone = { approve: "text-ok", reject: "text-bad", request_info: "text-amber-ink" } as const
@@ -69,6 +69,7 @@ function ToDecide({ list }: { list: Registration[] }) {
                   </p>
                   <p className="text-[15px] text-muted-foreground">{p.name} · {r.rep} · {r.product}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {slaPct(r) >= 80 && <Badge className="border-0 bg-bad-soft text-bad">Escalated to Dana</Badge>}
                     {r.reasons.map((x) => (
                       <Badge key={x} className="border-0 bg-amber-soft text-amber-ink">{reviewReasonShort[x]}</Badge>
                     ))}
@@ -93,6 +94,7 @@ function ToDecide({ list }: { list: Registration[] }) {
 function Extensions({ list, onOpen }: { list: ExtensionRequest[]; onOpen: (id: string) => void }) {
   const { partner, state } = useStore()
   const done = state.extensions.filter((e) => e.status !== "pending")
+  const { withChief } = useQueue()
   return (
     <div className="space-y-6">
       {list.length === 0 ? (
@@ -125,6 +127,20 @@ function Extensions({ list, onOpen }: { list: ExtensionRequest[]; onOpen: (id: s
           })}
         </ul>
       )}
+      {withChief.length > 0 && (
+        <Panel title="Waiting for Dana Ortiz" sub="Second extension requests. Only the channel chief can decide these (R-REG-11); you'll be told the outcome.">
+          <ul className="divide-y">
+            {withChief.map((e) => (
+              <li key={e.id}>
+                <button onClick={() => onOpen(e.id)} className="flex w-full flex-wrap items-center justify-between gap-2 py-3 text-left first:pt-0 last:pb-0 hover:text-primary">
+                  <span className="text-foreground">{e.customer} · {partner(e.partnerId)!.name} <span className="text-muted-foreground">· asks for {e.requestedDays} more days, ends in {e.daysLeft} days</span></span>
+                  <Badge className="border-0 bg-brand-soft text-primary">Second request · with Dana</Badge>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
       {done.length > 0 && (
         <Panel title="Decided extensions">
           <ul className="divide-y">
@@ -132,7 +148,7 @@ function Extensions({ list, onOpen }: { list: ExtensionRequest[]; onOpen: (id: s
               <li key={e.id} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
                 <span className="text-foreground">{e.customer} · {partner(e.partnerId)!.name}</span>
                 {e.status === "granted" ? (
-                  <Badge className="border-0 bg-ok-soft text-ok">Extended {e.decidedDays} days</Badge>
+                  <Badge className="border-0 bg-ok-soft text-ok">Extended {e.decidedDays} days{e.previousExtensions > 0 ? " by Dana" : ""}</Badge>
                 ) : (
                   <Badge className="border-0 bg-bad-soft text-bad">Declined</Badge>
                 )}
@@ -245,7 +261,7 @@ function ExtensionSheet({ id, onClose }: { id: string | null; onClose: () => voi
         {e && p && (
           <>
             <SheetHeader className="border-b px-6 py-5">
-              <SheetTitle className="text-[20px]">Extend protection for {e.customer}?</SheetTitle>
+              <SheetTitle className="text-[20px]">{e.previousExtensions > 0 ? `Second extension for ${e.customer}` : `Extend protection for ${e.customer}?`}</SheetTitle>
               <SheetDescription>{p.name} · {money(e.value)} · {e.registrationId}</SheetDescription>
             </SheetHeader>
             <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
@@ -284,6 +300,12 @@ function ExtensionSheet({ id, onClose }: { id: string | null; onClose: () => voi
                 </ul>
               </div>
 
+              {e.previousExtensions > 0 ? (
+                <div className="rounded-[12px] border border-primary/30 bg-brand-soft/40 p-4">
+                  <p className="font-semibold text-foreground">This is a second extension, so Dana Ortiz decides it</p>
+                  <p className="mt-1 text-[15px]">You gave the first one. A second needs the channel chief (R-REG-11). It's in her Approvals with the AI advice above; you'll get a notification when she decides.</p>
+                </div>
+              ) : (
               <div>
                 <p className="mb-3 font-semibold text-foreground">Your decision</p>
                 <div role="radiogroup" aria-label="Decision" className="grid gap-2">
@@ -317,12 +339,15 @@ function ExtensionSheet({ id, onClose }: { id: string | null; onClose: () => voi
                   </div>
                 )}
               </div>
+              )}
             </div>
-            <SheetFooter className="border-t px-6 py-4">
-              <Button size="lg" disabled={!choice} onClick={submit} className={cn("w-full", choice === "grant" && "bg-ok text-white hover:bg-ok/90", choice === "deny" && "bg-bad text-white hover:bg-bad/90")}>
-                {choice === "deny" ? "Deny and tell the partner" : choice === "grant" ? `Extend by ${days} days` : "Choose grant or deny"}
-              </Button>
-            </SheetFooter>
+            {e.previousExtensions === 0 && (
+              <SheetFooter className="border-t px-6 py-4">
+                <Button size="lg" disabled={!choice} onClick={submit} className={cn("w-full", choice === "grant" && "bg-ok text-white hover:bg-ok/90", choice === "deny" && "bg-bad text-white hover:bg-bad/90")}>
+                  {choice === "deny" ? "Deny and tell the partner" : choice === "grant" ? `Extend by ${days} days` : "Choose grant or deny"}
+                </Button>
+              </SheetFooter>
+            )}
           </>
         )}
       </SheetContent>

@@ -18,7 +18,7 @@ import { me, partnerRoles, rejectReasons, reviewReasonLabel } from "@/data/model
 import { addDays, ago, date, money, NOW } from "@/lib/format"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
-import { useQueue, useStore } from "@/store"
+import { slaPct, useQueue, useStore } from "@/store"
 import { useMedia } from "@/lib/useMedia"
 
 type Choice = "approve" | "reject" | "info"
@@ -65,10 +65,25 @@ export function RegistrationScreen({ id }: { id: string }) {
             </div>
           )}
 
+          {reg.state === "under_review" && slaPct(reg) >= 80 && (
+            <div className="rounded-[14px] border border-bad/40 bg-bad-soft/50 px-5 py-4">
+              <p className="font-semibold text-bad">Escalated to Dana Ortiz at 80% of the deadline</p>
+              <p className="mt-1 text-[15.5px] text-foreground">She's been alerted and can decide it too. Decide now and it stays with you; at 100% it's reassigned to a backup reviewer, never auto-approved.</p>
+            </div>
+          )}
+
           {reg.state === "info_requested" && reg.infoRequest && (
             <div className="rounded-[14px] border bg-card px-5 py-4">
               <p className="flex items-center gap-2 font-semibold text-foreground"><Pause className="size-4" /> SLA paused · waiting on {reg.rep}</p>
               <p className="mt-1 text-[15.5px]">You asked {ago(reg.infoRequest.at)}: "{reg.infoRequest.asked}"</p>
+            </div>
+          )}
+
+          {reg.infoReply && reg.infoRequest && (
+            <div className="rounded-[14px] border border-primary/40 bg-brand-soft/30 px-5 py-4">
+              <p className="font-semibold text-foreground">{reg.infoReply.by} answered {ago(reg.infoReply.at)} · SLA resumed</p>
+              <p className="mt-1 text-[15px] text-muted-foreground">You asked: "{reg.infoRequest.asked}"</p>
+              <p className="mt-2 text-[15.5px] text-foreground">"{reg.infoReply.text}"</p>
             </div>
           )}
 
@@ -410,7 +425,7 @@ function Outcome({ reg }: { reg: Registration }) {
             {reg.state === "approved" ? "Approved" : reg.state === "rejected" ? "Rejected" : "Waiting on the partner"}
           </p>
           <p className="text-[14.5px] text-muted-foreground">
-            {d.by === "rules" ? `Decided by the rules in ${d.seconds} seconds` : justNow ? "Partner notified in 0.4 seconds" : `By you, ${ago(d.at)}`}
+            {d.by === "rules" ? `Decided by the rules in ${d.seconds} seconds` : justNow ? `${d.actor ? `By ${d.actor} · ` : ""}Partner notified in 0.4 seconds` : `By ${d.actor ?? "you"}, ${ago(d.at)}`}
           </p>
         </div>
       </div>

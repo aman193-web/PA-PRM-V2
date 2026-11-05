@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { Tabs as TabsPrimitive } from "radix-ui"
-import { AlertTriangle, ArrowLeft, Check, Pause, Sparkles, X } from "lucide-react"
+import { AlertTriangle, ArrowLeft, CalendarDays, Check, Globe, Megaphone, MonitorPlay, Pause, Sparkles, Tag, X } from "lucide-react"
 import type { Check as CheckT, Registration } from "@/data/model"
 import { hoursLeft, initials } from "@/lib/format"
 import { slaPct } from "@/store"
@@ -340,5 +340,25 @@ export function PageTabs({ value, onChange, items, label }: { value: string; onC
       </div>
       {active?.hint && <p className="mt-3 text-[15px] text-muted-foreground">{active.hint}</p>}
     </TabsPrimitive.Root>
+  )
+}
+
+/** Marks something we added as standard practice where the source documents are silent. */
+export function AddedTag({ className, short }: { className?: string; short?: boolean }) {
+  return (
+    <Badge variant="outline" className={cn("border-dashed border-amber-ink/60 bg-amber-soft/60 font-semibold text-amber-ink", className)}>
+      {short ? "Added · standard practice" : "Added · standard practice, not in the documents"}
+    </Badge>
+  )
+}
+
+/** Where a lead came from: Brightline's website, a webinar, an event or a joint campaign. */
+export function SourceTag({ source, className }: { source: string; className?: string }) {
+  const t = source.toLowerCase()
+  const Icon = t.includes("website") ? Globe : t.includes("webinar") ? MonitorPlay : t.includes("show") || t.includes("summit") || t.includes("event") ? CalendarDays : t.includes("marketing") ? Megaphone : Tag
+  return (
+    <Badge variant="outline" className={cn("gap-1 font-medium text-foreground", className)}>
+      <Icon className="size-3.5 text-primary" /> <span className="text-muted-foreground">Source:</span> {source}
+    </Badge>
   )
 }

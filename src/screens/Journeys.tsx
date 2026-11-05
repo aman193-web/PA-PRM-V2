@@ -1,17 +1,34 @@
 import { ArrowDown, ArrowRight, Ban, Check, CornerDownRight } from "lucide-react"
-import { PageHeader, Panel } from "@/components/common"
+import { AddedTag, PageHeader, Panel } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-interface Step {
+export interface JourneyStep {
   title: string
   detail: string
   href: string
   ids: string
   main?: boolean
+  /** Standard practice we added where the documents are silent. */
+  extra?: boolean
 }
 
-const journeys: { n: number; title: string; tag: string; stage: string; steps: Step[] }[] = [
+export interface Journey { n: number; title: string; tag: string; stage: string; steps: JourneyStep[] }
+
+export interface JourneysConfig {
+  title: string
+  sub?: string
+  journeys: Journey[]
+  handoffs: [string, string, boolean?][]
+  canTitle: string
+  can: string[]
+  cannot: string[]
+  note?: string
+}
+
+const cols: Record<number, string> = { 3: "lg:grid-cols-3", 4: "lg:grid-cols-4", 5: "lg:grid-cols-5" }
+
+const journeys: Journey[] = [
   {
     n: 1, title: "Work the review queue", tag: "J-01 Deal registration", stage: "Stage 1A",
     steps: [
@@ -40,20 +57,27 @@ const journeys: { n: number; title: string; tag: string; stage: string; steps: S
   },
 ]
 
-export function Journeys() {
+/** One role's journeys from the persona document: each row left to right, each step opens its screen. */
+export function JourneysView({ c }: { c: JourneysConfig }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Partner manager: three journeys"
-        sub="Each row is one journey from the persona document, left to right. Select a step to open that screen. Highlighted steps are the main action."
+        title={c.title}
+        sub={c.sub ?? "Each row is one journey from the persona document, left to right. Select a step to open that screen. Highlighted steps are the main action."}
       />
-      {journeys.map((j) => (
+      {c.journeys.some((j) => j.steps.some((s) => s.extra)) && (
+        <div className="flex flex-wrap items-center gap-3 rounded-[14px] border border-dashed border-amber-ink/50 bg-amber-soft/40 px-5 py-3.5 text-[15px] text-foreground">
+          <AddedTag />
+          Steps with this tag aren't in the persona documents. They're standard practice we filled in, to confirm with the product owner.
+        </div>
+      )}
+      {c.journeys.map((j) => (
         <Panel
           key={j.n}
           title={<span className="flex flex-wrap items-center gap-2">Journey {j.n} · {j.title} <Badge variant="secondary">{j.stage}</Badge></span>}
           sub={j.tag}
         >
-          <ol className={cn("grid gap-3", j.steps.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-3")}>
+          <ol className={cn("grid gap-3", cols[j.steps.length] ?? "lg:grid-cols-3")}>
             {j.steps.map((s, i) => (
               <li key={s.title} className="relative">
                 <a
@@ -61,9 +85,11 @@ export function Journeys() {
                   className={cn(
                     "flex h-full flex-col rounded-[12px] border p-4 transition hover:border-primary hover:shadow-[0_6px_18px_#172b4512]",
                     s.main && "border-2 border-primary bg-brand-soft/70",
+                    s.extra && "border-2 border-dashed border-amber-ink/60 bg-amber-soft/30",
                   )}
                 >
                   <span className={cn("grid size-7 place-items-center rounded-full text-[14px] font-bold", s.main ? "bg-primary text-primary-foreground" : "bg-muted text-foreground")}>{i + 1}</span>
+                  {s.extra && <AddedTag short className="mt-3 w-fit" />}
                   <b className="mt-3 text-[16px] leading-snug text-foreground">{s.title}</b>
                   <span className="mt-1 text-[14.5px]">{s.detail}</span>
                   <span className="mt-auto flex items-center justify-between gap-2 pt-3 text-[13px] text-muted-foreground">
@@ -83,28 +109,45 @@ export function Journeys() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Hand-offs">
           <ul className="space-y-3 text-[15px]">
-            {[
-              ["To the channel chief", "Registrations past 80% of SLA, credit split proposals, applications you escalate"],
-              ["To partner reps", "Every decision, with a reason code and plain-language explanation"],
-              ["From partner reps", "Registrations, extension requests, replies to your questions"],
-              ["From the agents", "SLA nudges (SLA agent), recommendations (Deal Desk agent), split calculations (Attribution agent)"],
-            ].map(([k, v]) => (
-              <li key={k} className="flex gap-3"><CornerDownRight className="mt-1 size-4 shrink-0 text-primary" /><span><b className="text-foreground">{k}:</b> {v}</span></li>
+            {c.handoffs.map(([k, v, extra]) => (
+              <li key={k} className="flex gap-3"><CornerDownRight className="mt-1 size-4 shrink-0 text-primary" /><span><b className="text-foreground">{k}:</b> {v}{extra && <span className="ml-2 inline-block align-middle"><AddedTag short /></span>}</span></li>
             ))}
           </ul>
         </Panel>
-        <Panel title="What a partner manager can and can't do">
+        <Panel title={c.canTitle}>
           <ul className="space-y-2.5 text-[15px]">
-            {["Decide registrations for assigned partners", "Accept or decline partner applications", "Add partners to opportunities and propose splits"].map((t) => (
+            {c.can.map((t) => (
               <li key={t} className="flex gap-3"><Check className="mt-0.5 size-4 shrink-0 text-ok" />{t}</li>
             ))}
-            {["Approve their own split proposals or any monetary reward", "See partners not assigned to them in detail"].map((t) => (
+            {c.cannot.map((t) => (
               <li key={t} className="flex gap-3"><Ban className="mt-0.5 size-4 shrink-0 text-bad" />{t}</li>
             ))}
           </ul>
-          <p className="mt-4 text-[14px] text-muted-foreground">Co-sell requests (J-03) arrive in Stage 2 and aren't designed here.</p>
+          {c.note && <p className="mt-4 text-[14px] text-muted-foreground">{c.note}</p>}
         </Panel>
       </div>
     </div>
+  )
+}
+
+export function Journeys() {
+  return (
+    <JourneysView
+      c={{
+        title: "Partner manager: three journeys",
+        journeys,
+        handoffs: [
+          ["To the channel chief", "Registrations past 80% of SLA, credit split proposals, applications you escalate"],
+          ["To partner reps", "Every decision, with a reason code and plain-language explanation"],
+          ["From partner reps", "Registrations, extension requests, replies to your questions"],
+          ["From the agents", "SLA nudges (SLA agent), recommendations (Deal Desk agent), split calculations (Attribution agent)"],
+          ["From the channel chief", "Partners assigned or moved to you", true],
+        ],
+        canTitle: "What a partner manager can and can't do",
+        can: ["Decide registrations for assigned partners", "Accept or decline partner applications", "Add partners to opportunities and propose splits"],
+        cannot: ["Approve their own split proposals or any monetary reward", "See partners not assigned to them in detail"],
+        note: "Co-sell requests (J-03) arrive in Stage 2 and aren't designed here.",
+      }}
+    />
   )
 }

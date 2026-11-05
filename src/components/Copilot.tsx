@@ -3,7 +3,7 @@ import { ArrowUp, Sparkles } from "lucide-react"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useQueue, useStore, slaPct, type State } from "@/store"
+import { pipelineOf, useQueue, useStore, slaPct, type State } from "@/store"
 import { hoursLeft, money } from "@/lib/format"
 import { go } from "@/lib/router"
 
@@ -53,11 +53,12 @@ function answer(q: string, s: State, queue: ReturnType<typeof useQueue>): Msg {
   }
   if (t.includes("pipeline") || t.includes("revenue")) {
     const mine = s.partners.filter((p) => p.assigned && p.status === "active")
-    const total = mine.reduce((n, p) => n + p.pipeline, 0)
-    const top = [...mine].sort((a, b) => b.pipeline - a.pipeline).slice(0, 3)
+    const pipe = (id: string) => pipelineOf(s, id)
+    const total = mine.reduce((n, p) => n + pipe(p.id), 0)
+    const top = [...mine].sort((a, b) => pipe(b.id) - pipe(a.id)).slice(0, 3)
     return {
       from: "ai",
-      text: `Your ${mine.length} active partners have ${money(total)} in open pipeline. The biggest: ${top.map((p) => `${p.name} (${money(p.pipeline)})`).join(", ")}.`,
+      text: `Your ${mine.length} active partners have ${money(total)} in open pipeline. The biggest: ${top.map((p) => `${p.name} (${money(pipe(p.id))})`).join(", ")}.`,
       links: [{ label: "Open partners", href: "/partners/all" }],
     }
   }

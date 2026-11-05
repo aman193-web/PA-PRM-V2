@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ArrowRight, Check, KeyRound, Loader2, Mail, Route } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, KeyRound, Loader2, Mail, Route } from "lucide-react"
 import { Logo } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -68,8 +68,30 @@ function CardStack() {
   )
 }
 
-export function Login({ onSignIn }: { onSignIn: (to?: string) => void }) {
-  const [email, setEmail] = useState(me.email)
+/** The channel chief signs in through the same vendor login, with her own copy. */
+const chiefCopy = {
+  title: "Approve what matters. Prove what partners are worth.",
+  sub: "Escalations, credit overrides and program rules in one inbox, with verified partner revenue ready for the board.",
+  stats: [["1 inbox", "for every escalation and override"], ["Verified", "revenue, matched to closed-won"], ["From Slack", "approve straight from the alert"]],
+  badge: "Channel chief workspace",
+  line: "Sign in to approve escalations and see partner revenue.",
+  points: ["Every partner and partner manager, in full", "Every approval logged and explained"],
+}
+
+function ChiefPreview() {
+  return (
+    <div className="w-full max-w-[420px] rounded-[18px] border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm">
+      <span className="text-[13px] font-bold text-[#ffb359]">Waiting for your approval</span>
+      {[["Kestrel Energy", "Escalated at 82% of its deadline"], ["Brookside Bank", "Credit split change from Jordan"], ["Tidewater Systems", "Application · wants Platinum"]].map(([t, d]) => (
+        <div key={t} className="mt-3 rounded-[12px] bg-white/[0.06] px-3.5 py-2.5"><b className="block text-[15.5px] text-white">{t}</b><span className="text-[13.5px] text-[#a9bfdc]">{d}</span></div>
+      ))}
+    </div>
+  )
+}
+
+export function Login({ onSignIn, onBack, variant = "pam" }: { onSignIn: (to?: string) => void; onBack?: () => void; variant?: "pam" | "chief" }) {
+  const c = variant === "chief" ? chiefCopy : null
+  const [email, setEmail] = useState(c ? "dana.ortiz@brightline.io" : me.email)
   const [busy, setBusy] = useState<string | null>(null)
 
   const start = (method: string, to?: string) => {
@@ -98,21 +120,21 @@ export function Login({ onSignIn }: { onSignIn: (to?: string) => void }) {
             </span>
           </div>
           <h1 className="mt-7 max-w-[19ch] text-[32px] leading-[1.08] font-bold text-white sm:text-[40px] xl:text-[44px]">
-            Decide the partner deals rules can't, in three taps.
+            {c ? c.title : "Decide the partner deals rules can't, in three taps."}
           </h1>
           <p className="mt-4 max-w-[46ch] text-[17px] text-[#b9cbe4]">
-            Your review queue, partner onboarding and multi-partner credit in one workspace, with Salesforce kept in sync.
+            {c ? c.sub : "Your review queue, partner onboarding and multi-partner credit in one workspace, with Salesforce kept in sync."}
           </p>
         </div>
         <div className="relative hidden flex-1 items-center pt-2 pb-16 sm:flex sm:pr-8 xl:pr-12">
-          <CardStack />
+          {c ? <ChiefPreview /> : <CardStack />}
         </div>
         <div className="relative grid gap-3 sm:grid-cols-3">
-          {[
+          {(c ? c.stats : [
             ["60 seconds", "for rules to decide clean deals"],
             ["3 taps", "for you to decide the rest"],
             ["1 second", "until the partner hears why"],
-          ].map(([k, v]) => (
+          ]).map(([k, v]) => (
             <div key={k} className="rounded-[14px] border border-white/15 bg-white/[0.04] px-4 py-3.5 backdrop-blur-sm xl:px-5">
               <b className="block text-[17px] text-white">{k}</b>
               <span className="text-[14.5px] text-[#a9bfdc]">{v}</span>
@@ -124,11 +146,16 @@ export function Login({ onSignIn }: { onSignIn: (to?: string) => void }) {
       {/* Sign-in side */}
       <main className="flex items-center justify-center px-6 py-10 sm:px-10 lg:overflow-y-auto">
         <div className="w-full max-w-[460px]">
-          <span className="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 text-[14px] font-semibold text-primary">
-            Partner manager workspace
+          {onBack && (
+            <button type="button" onClick={onBack} className="mb-5 inline-flex items-center gap-1.5 text-[15px] font-medium text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="size-4" /> All roles
+            </button>
+          )}
+          <span className="flex w-fit items-center gap-2 rounded-full bg-brand-soft px-3 py-1 text-[14px] font-semibold text-primary">
+            {c ? c.badge : "Partner manager workspace"}
           </span>
           <h2 className="mt-3 text-[30px] font-bold">Welcome back</h2>
-          <p className="mt-1 text-[16px] text-muted-foreground sm:whitespace-nowrap">Sign in to review deals and manage your partners.</p>
+          <p className="mt-1 text-[16px] text-muted-foreground sm:whitespace-nowrap">{c ? c.line : "Sign in to review deals and manage your partners."}</p>
 
           <div className="mt-6 grid gap-3">
             <button
@@ -186,15 +213,18 @@ export function Login({ onSignIn }: { onSignIn: (to?: string) => void }) {
           </form>
 
           <ul className="mt-6 grid gap-2 text-[14.5px] text-muted-foreground">
-            <li className="flex gap-2"><Check className="mt-0.5 size-4 text-ok" /> Only the partners assigned to you, in full detail</li>
-            <li className="flex gap-2"><Check className="mt-0.5 size-4 text-ok" /> Every decision is logged and explained to the partner</li>
+            {(c ? c.points : ["Only the partners assigned to you, in full detail", "Every decision is logged and explained to the partner"]).map((p) => (
+              <li key={p} className="flex gap-2"><Check className="mt-0.5 size-4 text-ok" /> {p}</li>
+            ))}
           </ul>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
             <p className="text-[14px] text-muted-foreground">Demo sign-in · nothing is sent.</p>
-            <button type="button" onClick={() => start("journeys", "/journeys")} className="inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-primary hover:underline">
-              <Route className="size-4" /> See the three journeys <ArrowRight className="size-4" />
-            </button>
+            {!c && (
+              <button type="button" onClick={() => start("journeys", "/journeys")} className="inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-primary hover:underline">
+                <Route className="size-4" /> See the three journeys <ArrowRight className="size-4" />
+              </button>
+            )}
           </div>
         </div>
       </main>
