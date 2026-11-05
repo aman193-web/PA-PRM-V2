@@ -1,0 +1,261 @@
+@import "tailwindcss" source("..");
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@xyflow/react/dist/style.css";
+
+/* Dark mode follows the viewer: an explicit data-theme wins, otherwise the OS setting. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+}
+
+/* Layout: navy map rail on the left, light reading canvas, IDs in mono like a spec sheet. */
+:root {
+  --radius: 0.625rem;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-code: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --night: #102f57;
+  --night-2: #163d70;
+  --night-ink: #dbe7f7;
+  --night-muted: #9fb6d6;
+  --brand-soft: #eaf2fd;
+  --amber: #ffb359;
+  --amber-soft: #fff4e5;
+  --amber-ink: #8a4b00;
+  --ok: #1a7f4b;
+  --ok-soft: #e7f6ee;
+  --bad: #b42318;
+  --bad-soft: #fdecea;
+  --violet: #6d3fd1;
+  --violet-soft: #f1ecfd;
+  --slate: #5b6779;
+  --slate-soft: #eef1f6;
+  --body: #3f4652;
+  --surface-2: #f8fafc;
+  --border-strong: #cbd5e1;
+  --lane: #f3f6fb;
+
+  --background: #f5f7fb;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --primary: #0969da;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f7;
+  --secondary-foreground: #18181b;
+  --muted: #f1f5f9;
+  --muted-foreground: #5b6779;
+  --accent: #eef3fb;
+  --accent-foreground: #18181b;
+  --destructive: #b42318;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #0969da;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --night: #0a1a30;
+    --night-2: #12294a;
+    --night-ink: #dbe7f7;
+    --night-muted: #8ea6c8;
+    --brand-soft: #16294a;
+    --amber-soft: #3a2a12;
+    --amber-ink: #ffcf8f;
+    --ok: #4fd18b;
+    --ok-soft: #123323;
+    --bad: #ff8a80;
+    --bad-soft: #3a1717;
+    --violet: #c4b0ff;
+    --violet-soft: #2a2147;
+    --slate: #a3b0c4;
+    --slate-soft: #1c2840;
+    --body: #c7d0dd;
+    --surface-2: #1a2740;
+    --border-strong: #33445f;
+    --lane: #121d30;
+    --background: #0d1522;
+    --foreground: #eef2f8;
+    --card: #152033;
+    --card-foreground: #eef2f8;
+    --popover: #152033;
+    --popover-foreground: #eef2f8;
+    --primary: #4c9aff;
+    --primary-foreground: #06121f;
+    --secondary: #1a2740;
+    --secondary-foreground: #eef2f8;
+    --muted: #1a2740;
+    --muted-foreground: #9aa6ba;
+    --accent: #1c2c47;
+    --accent-foreground: #eef2f8;
+    --destructive: #ff8a80;
+    --border: #24324a;
+    --input: #33445f;
+    --ring: #4c9aff;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --night: #0a1a30;
+  --night-2: #12294a;
+  --night-ink: #dbe7f7;
+  --night-muted: #8ea6c8;
+  --brand-soft: #16294a;
+  --amber-soft: #3a2a12;
+  --amber-ink: #ffcf8f;
+  --ok: #4fd18b;
+  --ok-soft: #123323;
+  --bad: #ff8a80;
+  --bad-soft: #3a1717;
+  --violet: #c4b0ff;
+  --violet-soft: #2a2147;
+  --slate: #a3b0c4;
+  --slate-soft: #1c2840;
+  --body: #c7d0dd;
+  --surface-2: #1a2740;
+  --border-strong: #33445f;
+  --lane: #121d30;
+  --background: #0d1522;
+  --foreground: #eef2f8;
+  --card: #152033;
+  --card-foreground: #eef2f8;
+  --popover: #152033;
+  --popover-foreground: #eef2f8;
+  --primary: #4c9aff;
+  --primary-foreground: #06121f;
+  --secondary: #1a2740;
+  --secondary-foreground: #eef2f8;
+  --muted: #1a2740;
+  --muted-foreground: #9aa6ba;
+  --accent: #1c2c47;
+  --accent-foreground: #eef2f8;
+  --destructive: #ff8a80;
+  --border: #24324a;
+  --input: #33445f;
+  --ring: #4c9aff;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-heading: var(--font-ui);
+  --font-mono: var(--font-code);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-night: var(--night);
+  --color-night-2: var(--night-2);
+  --color-night-ink: var(--night-ink);
+  --color-night-muted: var(--night-muted);
+  --color-brand-soft: var(--brand-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-amber-ink: var(--amber-ink);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-slate: var(--slate);
+  --color-slate-soft: var(--slate-soft);
+  --color-body: var(--body);
+  --color-surface-2: var(--surface-2);
+  --color-border-strong: var(--border-strong);
+  --color-lane: var(--lane);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html, body {
+    height: 100%;
+  }
+  h1, h2, h3, h4 {
+    color: var(--foreground);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Unlayered on purpose: the claude.ai viewer wraps the page in a reset that sets the body's background,
+   color and font without a layer, and any unlayered rule beats Tailwind's @layer base. */
+html body {
+  background: var(--background);
+  color: var(--body);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .tabular { font-variant-numeric: tabular-nums; }
+  .eyebrow { font-size: 12.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .gutter {
+    padding-left: max(clamp(16px, 3.5vw, 40px), env(safe-area-inset-left, 0px));
+    padding-right: max(clamp(16px, 3.5vw, 40px), env(safe-area-inset-right, 0px));
+  }
+  .map-grid {
+    background-image: radial-gradient(color-mix(in oklab, var(--night-muted) 22%, transparent) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+}
+
+/* React Flow follows our tokens in both themes. */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-edge-stroke: var(--border-strong);
+  --xy-edge-label-background-color: var(--card);
+  --xy-edge-label-color: var(--muted-foreground);
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--muted);
+  --xy-controls-button-color: var(--foreground);
+  --xy-controls-button-border-color: var(--border);
+  --xy-attribution-background-color: transparent;
+}
+.react-flow__attribution { display: none; }
+.react-flow__edge-textbg { fill: var(--card); }
+.react-flow__edge-text { fill: var(--muted-foreground); font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

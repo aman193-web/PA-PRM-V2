@@ -14,9 +14,17 @@ The app opens on a demo-only **Choose a portal** page.
 - Pick a role to sign in. The address bar shows who's signed in, e.g. `?role=channel-chief`.
 - **Sign out · switch role** keeps your changes, so actions carry across portals. For example, register a deal as Marcus and it's waiting in Jordan's queue.
 - A browser refresh resets everything.
-- The page header links to the **PRM Knowledge Hub**: personas, permissions, rules, flows and decisions.
+- The **PRM Knowledge Hub** (personas, permissions, rules, flows and decisions) is part of this app at `/hub/`. It's linked from the Choose a portal header and from every portal's sidebar and account menu. It opens in a new tab, so the demo data isn't reset.
 
 Names and companies are illustrative.
+
+### Knowledge hub
+
+The hub's source is in `hub/`: its own page (`hub/index.html`), styles and hash routes. It imports with `@hub/…`, while the portals keep `@/…`.
+
+- Content lives in `hub/src/content/`. Update it there whenever a portal or a decision changes.
+- `npm run check:hub` checks that every item has a source and status and that every link resolves. `npm run build` runs this check first.
+- Without the claude.ai viewer, "Ask the hub" lists the closest hub items instead of giving AI answers.
 
 ## Partner manager (PAM / CAM)
 

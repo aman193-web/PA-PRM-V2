@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* The knowledge hub under hub/ is its own page with its own styles. */
+@source not "../hub";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
