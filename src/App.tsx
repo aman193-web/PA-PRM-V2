@@ -19,6 +19,10 @@ import { Journeys } from "@/screens/Journeys"
 import { Salesforce } from "@/screens/Salesforce"
 import { Deals } from "@/screens/Deals"
 import { PartnerProfile } from "@/screens/PartnerProfile"
+import { Welcome, type DemoRole } from "@/screens/Welcome"
+import { PartnerLogin } from "@/partner/PartnerLogin"
+import { PartnerApp } from "@/partner/PartnerApp"
+import { ChiefApp } from "@/chief/ChiefApp"
 
 function Routes({ onSignOut }: { onSignOut: () => void }) {
   const { parts } = useRoute()
@@ -74,30 +78,53 @@ function Routes({ onSignOut }: { onSignOut: () => void }) {
   )
 }
 
+const roleSlug: Record<DemoRole, string> = { pam: "partner-manager", chief: "channel-chief", pexec: "partner-executive", rep: "partner-sales-rep" }
+
 export default function App() {
-  const [authed, setAuthed] = useState(() => {
-    try {
-      return sessionStorage.getItem("prm-pam-auth") === "1"
-    } catch {
-      return false
-    }
-  })
-  const { path } = useRoute()
+  // Demo data lives only in memory, and so does the sign-in: a page refresh is a clean start on the welcome page.
+  const [role, setRole] = useState<DemoRole | null>(null)
+  const { path, parts } = useRoute()
 
+  // Signed out: the demo welcome page and sign-in pages. Signed in: each role stays inside its own portal.
   useEffect(() => {
-    if (!authed && path !== "/login") go("/login")
-    if (authed && (path === "/login" || path === "/")) go("/home")
-  }, [authed, path])
+    if (path === "/login") go("/signin/pam")
+    else if (!role) { if (path !== "/welcome" && !path.startsWith("/signin/")) go("/welcome") }
+    else if (role === "pam") { if (path === "/" || path === "/welcome" || path.startsWith("/signin/") || path.startsWith("/p/") || path.startsWith("/c/")) go("/home") }
+    else if (role === "chief") { if (!path.startsWith("/c/")) go("/c/home") }
+    else if (!path.startsWith("/p/")) go("/p/home")
+  }, [role, path])
 
-  const signIn = (to = "/home") => {
-    try { sessionStorage.setItem("prm-pam-auth", "1") } catch { /* private mode */ }
-    setAuthed(true)
-    go(to)
+  // Show who is signed in as ?role=… in the address bar. It's a label only: a refresh still starts fresh.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (role) params.set("role", roleSlug[role])
+    else params.delete("role")
+    const q = params.toString()
+    try { history.replaceState(null, "", `${window.location.pathname}${q ? `?${q}` : ""}${window.location.hash}`) } catch { /* not allowed here */ }
+  }, [role])
+
+  const signIn = (r: DemoRole, to?: string) => {
+    setRole(r)
+    go(to ?? (r === "pam" ? "/home" : r === "chief" ? "/c/home" : "/p/home"))
   }
   const signOut = () => {
-    try { sessionStorage.removeItem("prm-pam-auth") } catch { /* private mode */ }
-    setAuthed(false)
-    go("/login")
+    setRole(null)
+    go("/welcome")
+  }
+
+  let screen: ReactNode
+  if (!role) {
+    const who = parts[0] === "signin" ? (parts[1] as DemoRole) : null
+    if (who === "pam") screen = <Login onSignIn={(to) => signIn("pam", to)} onBack={() => go("/welcome")} />
+    else if (who === "chief") screen = <Login variant="chief" onSignIn={() => signIn("chief")} onBack={() => go("/welcome")} />
+    else if (who === "pexec" || who === "rep") screen = <PartnerLogin role={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
+    else screen = <Welcome onPick={(r) => signIn(r)} />
+  } else if (role === "pam") {
+    screen = <Routes onSignOut={signOut} />
+  } else if (role === "chief") {
+    screen = <ChiefApp onSignOut={signOut} />
+  } else {
+    screen = <PartnerApp role={role} onSignOut={signOut} />
   }
 
   return (
@@ -105,7 +132,7 @@ export default function App() {
       <TooltipProvider>
         <StoreProvider>
           <CopilotProvider>
-            {authed ? <Routes onSignOut={signOut} /> : <Login onSignIn={signIn} />}
+            {screen}
             <Toaster
               position="bottom-right"
               richColors={false}

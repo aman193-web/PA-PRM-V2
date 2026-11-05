@@ -1,4 +1,24 @@
-# PRM · Partner Manager (PAM / CAM) prototype
+# PRM · four-portal prototype
+
+A clickable prototype of the PRM with four portals, each showing only what that person may see and do:
+
+| Portal | Person | Routes | Spec |
+|---|---|---|---|
+| Partner manager | Jordan Lee (Brightline) | `#/home`, `#/queue` … | this README |
+| Channel chief | Dana Ortiz (Brightline) | `#/c/…` | [docs/Channel_Chief_Spec.md](docs/Channel_Chief_Spec.md) |
+| Partner executive | Paul Okafor (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
+| Partner sales rep | Marcus Bell (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
+
+The app opens on a demo-only **Choose a portal** page.
+
+- Pick a role to sign in. The address bar shows who's signed in, e.g. `?role=channel-chief`.
+- **Sign out · switch role** keeps your changes, so actions carry across portals. For example, register a deal as Marcus and it's waiting in Jordan's queue.
+- A browser refresh resets everything.
+- The page header links to the **PRM Knowledge Hub**: personas, permissions, rules, flows and decisions.
+
+Names and companies are illustrative.
+
+## Partner manager (PAM / CAM)
 
 A clickable prototype of the partner manager workspace, built from *PRM User Journeys by Persona* (27 Oct) and the 28 Oct planning deck. It's React + Vite + Tailwind v4 + shadcn/ui (Radix). It keeps the previous design's palette (navy `#102f57`, brand `#0969da`, amber `#ffb359`) and its sign-in layout.
 

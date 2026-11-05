@@ -7,7 +7,7 @@ import type { Onboarding } from "@/data/model"
 import { ago, date, moneyShort } from "@/lib/format"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
-import { useQueue, useStore } from "@/store"
+import { pipelineOf, useQueue, useStore } from "@/store"
 
 export function Partners({ tab = "applications" }: { tab?: string }) {
   const q = useQueue()
@@ -187,7 +187,7 @@ function MyPartners({ onOpen }: { onOpen: (id: string) => void }) {
                   {p.program} · {p.tier}
                   {p.status === "onboarding" && <Badge className="border-0 bg-amber-soft text-amber-ink">Onboarding</Badge>}
                 </span>
-                <span className="text-[15px] font-semibold text-foreground tabular md:text-right"><span className="text-muted-foreground md:hidden">Pipeline </span>{moneyShort(p.pipeline)}</span>
+                <span className="text-[15px] font-semibold text-foreground tabular md:text-right"><span className="text-muted-foreground md:hidden">Pipeline </span>{moneyShort(pipelineOf(state, p.id))}</span>
                 <span className="text-[15px] text-foreground tabular md:text-right"><span className="text-muted-foreground md:hidden">Won </span>{moneyShort(p.wonThisYear)}</span>
                 <span className="flex items-center justify-between text-[14.5px] text-muted-foreground">{ago(p.lastActivity)}<ChevronRight className="hidden size-4 md:block" /></span>
               </button>

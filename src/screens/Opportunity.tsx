@@ -67,6 +67,13 @@ export function OpportunityScreen({ id }: { id: string }) {
         </div>
       )}
 
+      {!o.proposal && o.proposalOutcome && (
+        <div className={cn("mb-6 rounded-[14px] border px-5 py-4 text-[15px]", o.proposalOutcome.approved ? "border-ok/40 bg-ok-soft/60" : "border-bad/40 bg-bad-soft/60")}>
+          <b className={o.proposalOutcome.approved ? "text-ok" : "text-bad"}>{o.proposalOutcome.by} {o.proposalOutcome.approved ? "approved your split" : "declined your split"}</b>
+          <span className="text-foreground"> · {ago(o.proposalOutcome.at)}. {o.proposalOutcome.approved ? "It's live, versioned, and every partner on the deal was told why." : o.proposalOutcome.reason}</span>
+        </div>
+      )}
+
       {o.reconciliation && (
         <div className={cn("mb-6 rounded-[14px] border px-5 py-4 text-[15px]", o.reconciliation === "matched" ? "border-ok/40 bg-ok-soft/60" : "border-bad/40 bg-bad-soft/60")}>
           <b className={o.reconciliation === "matched" ? "text-ok" : "text-bad"}>{o.reconciliation === "matched" ? "Reconciled" : "Mismatch"}</b>

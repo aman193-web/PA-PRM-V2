@@ -5,7 +5,15 @@ import type {
   Opportunity, Partner, PartnerRole, Registration, Tier,
 } from "@/data/model"
 import { roleWeights } from "@/data/model"
-import { NOW, addDays } from "@/lib/format"
+import { NOW, addDays, money } from "@/lib/format"
+import { agreementsSeed, teamSeed, type Agreement as PartnerAgreement, type TeamMember } from "@/partner/data"
+import { agents as agentSeed, requestsSeed, rulesSeed, type ChangeRequest, type ProgramId, type RuleSet } from "@/chief/data"
+
+/** Something that happened on the partner side. `rep` limits it to that rep (and the partner's admin). */
+export interface PartnerFeedItem { id: string; at: string; text: string; href?: string; rep?: string }
+export interface Dispute { id: string; regId: string; by: string; reason: string; at: string }
+/** A partner moved between partner managers by the channel chief. Standard practice, not in the documents. */
+export interface Assignment { id: string; partnerId: string; partner: string; from: string; to: string; reason: string; at: string }
 
 export interface State {
   partners: Partner[]
@@ -22,6 +30,16 @@ export interface State {
   crmIssues: CrmIssue[]
   leads: Lead[]
   notes: Record<string, { at: string; text: string }[]>
+  team: TeamMember[]
+  agreements: PartnerAgreement[]
+  disputes: Dispute[]
+  partnerFeed: PartnerFeedItem[]
+  requests: ChangeRequest[]
+  agentLevels: Record<string, string>
+  chiefFeed: ActivityItem[]
+  assignments: Assignment[]
+  programRules: Record<ProgramId, RuleSet>
+  pausedAgents: string[]
 }
 
 const initial: State = {
@@ -41,6 +59,29 @@ const initial: State = {
   notes: {
     ridgeway: [{ at: "2026-10-21T16:00:00", text: "Marcus wants co-marketing for the hospitality push in Q1." }],
   },
+  team: teamSeed,
+  agreements: agreementsSeed,
+  disputes: [],
+  partnerFeed: [
+    { id: "pf1", at: "2026-10-28T09:00:00", text: "Jordan Lee sent Ridgeway a lead: Pioneer Hotels Group", href: "/p/leads" },
+    { id: "pf2", at: "2026-10-28T08:40:54", text: "Rules approved Coastal Credit Union in 44 seconds", href: "/p/deal/REG-2039", rep: "Marcus Bell" },
+    { id: "pf3", at: "2026-10-28T08:10:30", text: "Acme Manufacturing is with Jordan Lee for review", href: "/p/deal/REG-2041", rep: "Marcus Bell" },
+    { id: "pf4", at: "2026-10-27T17:30:00", text: "Jordan Lee sent Marcus a lead: Lakeside Logistics", href: "/p/leads", rep: "Marcus Bell" },
+    { id: "pf5", at: "2026-10-27T09:30:00", text: "Jordan Lee asked a question about Solace Retail", href: "/p/deal/REG-2027", rep: "Marcus Bell" },
+    { id: "pf6", at: "2026-10-10T09:00:36", text: "Rules approved Copperline Mining in 36 seconds", href: "/p/deal/REG-1960", rep: "Jenna Ruiz" },
+  ],
+  requests: requestsSeed,
+  assignments: [],
+  programRules: rulesSeed,
+  pausedAgents: [],
+  agentLevels: Object.fromEntries(agentSeed.map((a) => [a.id, a.level])),
+  chiefFeed: [
+    { id: "cf1", at: "2026-10-28T10:20:00", text: "Kestrel Energy passed 80% of its review deadline with Jordan Lee", href: "/c/approval/reg-REG-2038" },
+    { id: "cf2", at: "2026-10-27T17:05:00", text: "Jordan Lee proposed a new credit split on Brookside Bank", href: "/c/approval/split-006Q8000020BrkS" },
+    { id: "cf3", at: "2026-10-27T16:00:00", text: "Ana Costa (RevOps) asked to raise the auto-approve limit for top partners", href: "/c/approval/req-CR-21" },
+    { id: "cf4", at: "2026-10-26T11:30:00", text: "Lee Park asked for more autonomy for the Deal Desk agent", href: "/c/approval/req-CR-22" },
+    { id: "cf5", at: "2026-10-24T15:00:00", text: "Jordan Lee escalated the Tidewater Systems application", href: "/c/approval/app-APP-113" },
+  ],
 }
 
 type Action =
@@ -61,6 +102,26 @@ type Action =
   | { type: "reportIssue"; id: string }
   | { type: "sendLead"; id: string; partnerId: string }
   | { type: "addNote"; partnerId: string; text: string }
+  // Partner-side actions (Partner executive and sales rep portals)
+  | { type: "partnerRegister"; reg: Registration; leadId?: string; by: string }
+  | { type: "partnerReply"; id: string; text: string; by: string }
+  | { type: "requestExtension"; regId: string; days: number; reason: string; by: string }
+  | { type: "leadAccept"; id: string; assignee: string; by: string }
+  | { type: "leadDecline"; id: string; reason: string; by: string }
+  | { type: "leadUpdate"; id: string; text: string }
+  | { type: "invite"; member: TeamMember }
+  | { type: "setCanRegister"; id: string; value: boolean }
+  | { type: "setMemberStatus"; id: string; status: TeamMember["status"] }
+  | { type: "uploadAgreement"; id: string }
+  | { type: "dispute"; regId: string; reason: string; by: string }
+  // Channel chief actions
+  | { type: "chiefSplit"; oppId: string; approve: boolean; reason?: string }
+  | { type: "chiefExtension"; id: string; grant: boolean; days?: number; reason?: string }
+  | { type: "chiefApp"; id: string; accept: boolean; tier?: Tier; reason?: string }
+  | { type: "chiefDeal"; id: string; action: "approve" | "reject" | "nudge"; reason?: string; message?: string }
+  | { type: "chiefRequest"; id: string; approve: boolean; note?: string }
+  | { type: "chiefAssign"; partnerId: string; to: string; reason: string }
+  | { type: "toggleAgent"; id: string }
 
 const stamp = () => NOW.toISOString()
 const log = (s: State, text: string, href?: string): ActivityItem[] => [
@@ -68,6 +129,17 @@ const log = (s: State, text: string, href?: string): ActivityItem[] => [
   ...s.activity,
 ]
 const partnerName = (s: State, id: string) => s.partners.find((p) => p.id === id)?.name ?? id
+const feed = (s: State, text: string, href?: string, rep?: string): PartnerFeedItem[] => [
+  { id: `pf${Date.now()}${Math.random()}`, at: stamp(), text, href, rep },
+  ...s.partnerFeed,
+]
+const notice = (s: State, title: string, body: string, href: string, tone: Notice["tone"] = "info"): Notice[] => [
+  { id: `n${Date.now()}${Math.random()}`, at: stamp(), channel: "In-app", title, body, href, read: false, tone },
+  ...s.notices,
+]
+const CHIEF = "Dana Ortiz"
+const chiefLog = (s: State, text: string, href?: string): ActivityItem[] => [{ id: `c${Date.now()}${Math.random()}`, at: stamp(), text, href }, ...s.chiefFeed]
+const daysTo = (iso: string) => Math.ceil((new Date(`${iso}T12:00:00`).getTime() - NOW.getTime()) / 86_400_000)
 
 /** Role-based split (the launch default suggested in D8): role weights, normalised to 100. */
 export function modelSplit(lines: { partnerId: string; role: PartnerRole }[]): CreditLine[] {
@@ -230,6 +302,205 @@ function reducer(s: State, a: Action): State {
       return { ...s, notes: { ...s.notes, [a.partnerId]: [{ at: stamp(), text: a.text }, ...(s.notes[a.partnerId] ?? [])] } }
     case "reportIssue":
       return { ...s, crmIssues: s.crmIssues.map((i) => (i.id === a.id ? { ...i, reported: true } : i)) }
+
+    /* ---------- partner side ---------- */
+    case "partnerRegister": {
+      const r = a.reg
+      const auto = r.decision?.by === "rules"
+      return {
+        ...s,
+        registrations: [r, ...s.registrations],
+        leads: a.leadId ? s.leads.map((l) => (l.id === a.leadId ? { ...l, status: "converted", registrationId: r.id } : l)) : s.leads,
+        partnerFeed: feed(s, auto ? `Rules approved ${r.customer} in ${r.decision!.seconds} seconds` : `${r.customer} is with Jordan Lee for review`, `/p/deal/${r.id}`, r.rep),
+        notices: auto ? s.notices : notice(s, "New registration needs you", `${partnerName(s, r.partnerId)} · ${r.customer} · ${money(r.value)}`, `/registration/${r.id}`),
+        activity: log(s, auto ? `Rules approved ${r.customer} for ${partnerName(s, r.partnerId)} in ${r.decision!.seconds} seconds` : `${a.by} registered ${r.customer}; it needs your review`, `/registration/${r.id}`),
+      }
+    }
+    case "partnerReply": {
+      const reg = s.registrations.find((r) => r.id === a.id)!
+      return {
+        ...s,
+        registrations: s.registrations.map((r) =>
+          r.id === a.id ? { ...r, state: "under_review", decision: undefined, infoReply: { text: a.text, at: stamp(), by: a.by } } : r,
+        ),
+        partnerFeed: feed(s, `${a.by} answered Jordan's question on ${reg.customer}; the review clock resumed`, `/p/deal/${a.id}`, reg.rep),
+        notices: notice(s, `${a.by.split(" ")[0]} replied on ${reg.customer}`, "The SLA has resumed from where it paused", `/registration/${a.id}`),
+        activity: log(s, `${a.by} answered your question on ${reg.customer}; SLA resumed`, `/registration/${a.id}`),
+      }
+    }
+    case "requestExtension": {
+      const reg = s.registrations.find((r) => r.id === a.regId)!
+      const ext: ExtensionRequest = {
+        id: `EXT-${320 + s.extensions.length}`, registrationId: reg.id, partnerId: reg.partnerId, customer: reg.customer, value: reg.value,
+        protectionEnds: reg.protectedUntil!, daysLeft: daysTo(reg.protectedUntil!), requestedDays: a.days, reason: a.reason,
+        crmStage: reg.crmStage ?? "Open", lastActivity: "Today · requested by the partner", previousExtensions: 0,
+        ai: {
+          action: "grant", headline: `Grant ${a.days} days`, confidence: 0.84, days: a.days,
+          evidence: [`The deal is in ${reg.crmStage ?? "an open stage"} in Salesforce.`, "First extension request for this deal.", "The partner gave a dated reason."],
+        },
+        status: "pending",
+      }
+      return {
+        ...s,
+        extensions: [ext, ...s.extensions],
+        partnerFeed: feed(s, `${a.by} asked Jordan for ${a.days} more days on ${reg.customer}`, `/p/deal/${reg.id}`, reg.rep),
+        notices: notice(s, "Extension request", `${partnerName(s, reg.partnerId)} · ${reg.customer} · ${a.days} days`, "/queue/extensions", "warn"),
+        activity: log(s, `${partnerName(s, reg.partnerId)} asked to extend ${reg.customer} by ${a.days} days`, "/queue/extensions"),
+      }
+    }
+    case "leadAccept": {
+      const lead = s.leads.find((l) => l.id === a.id)!
+      const self = a.assignee === a.by
+      return {
+        ...s,
+        leads: s.leads.map((l) => (l.id === a.id ? { ...l, status: "accepted", assignee: a.assignee, update: self ? `Accepted by ${a.by}` : `Accepted by ${a.by}; assigned to ${a.assignee}` } : l)),
+        partnerFeed: feed(s, self ? `${a.by} accepted the ${lead.company} lead` : `${a.by} accepted ${lead.company} and assigned it to ${a.assignee}`, "/p/leads", a.assignee),
+        notices: notice(s, `${partnerName(s, lead.partnerId!)} accepted a lead`, `${lead.company} · owner ${a.assignee}`, "/deals/leads"),
+        activity: log(s, `${partnerName(s, lead.partnerId!)} accepted the ${lead.company} lead`, "/deals/leads"),
+      }
+    }
+    case "leadDecline": {
+      const lead = s.leads.find((l) => l.id === a.id)!
+      return {
+        ...s,
+        leads: s.leads.map((l) => (l.id === a.id ? { ...l, status: "declined", declineReason: a.reason } : l)),
+        partnerFeed: feed(s, `${a.by} declined the ${lead.company} lead (${a.reason})`, "/p/leads", lead.assignee),
+        notices: notice(s, `${partnerName(s, lead.partnerId!)} declined a lead`, `${lead.company} · ${a.reason}`, "/deals/leads", "warn"),
+        activity: log(s, `${partnerName(s, lead.partnerId!)} declined the ${lead.company} lead`, "/deals/leads"),
+      }
+    }
+    case "leadUpdate":
+      return { ...s, leads: s.leads.map((l) => (l.id === a.id ? { ...l, update: a.text } : l)) }
+    case "invite":
+      return { ...s, team: [...s.team, a.member], partnerFeed: feed(s, `Paul invited ${a.member.name} as ${a.member.role}`, "/p/team") }
+    case "setCanRegister":
+      return { ...s, team: s.team.map((m) => (m.id === a.id ? { ...m, canRegister: a.value } : m)) }
+    case "setMemberStatus":
+      return { ...s, team: s.team.map((m) => (m.id === a.id ? { ...m, status: a.status } : m)) }
+    case "uploadAgreement":
+      return {
+        ...s,
+        agreements: s.agreements.map((g) => (g.id === a.id ? { ...g, status: "on_file", detail: "Renewed certificate uploaded today · valid to Nov 30, 2027" } : g)),
+        partnerFeed: feed(s, "Paul uploaded the renewed certificate of insurance", "/p/program"),
+      }
+    /* ---------- channel chief ---------- */
+    case "chiefSplit": {
+      const o = s.opportunities.find((x) => x.id === a.oppId)!
+      const p = o.proposal!
+      return {
+        ...s,
+        opportunities: s.opportunities.map((x) =>
+          x.id !== a.oppId ? x : a.approve
+            ? { ...x, lines: p.lines, splitSource: "override", proposal: undefined, proposalOutcome: { approved: true, by: CHIEF, at: stamp() },
+                versions: [{ version: x.versions.length + 1, at: stamp(), by: `${CHIEF} approved Jordan Lee's proposal`, note: p.reason, lines: p.lines }, ...x.versions] }
+            : { ...x, proposal: undefined, proposalOutcome: { approved: false, by: CHIEF, at: stamp(), reason: a.reason } },
+        ),
+        notices: notice(s, a.approve ? `Dana approved your split on ${o.account}` : `Dana declined your split on ${o.account}`, a.approve ? "The new split is live and partners were told why" : a.reason ?? "", `/opportunity/${o.id}`, a.approve ? "info" : "warn"),
+        activity: log(s, a.approve ? `${CHIEF} approved your credit split on ${o.account}` : `${CHIEF} declined your credit split on ${o.account}`, `/opportunity/${o.id}`),
+        chiefFeed: chiefLog(s, a.approve ? `You approved the new credit split on ${o.account}` : `You declined the split proposal on ${o.account}`, `/c/approvals/done`),
+      }
+    }
+    case "chiefExtension": {
+      const ext = s.extensions.find((e) => e.id === a.id)!
+      return {
+        ...s,
+        extensions: s.extensions.map((e) => (e.id === a.id ? { ...e, status: a.grant ? "granted" : "denied", decidedDays: a.days, denyReason: a.reason } : e)),
+        registrations: a.grant ? s.registrations.map((r) => (r.id === ext.registrationId && r.protectedUntil ? { ...r, protectedUntil: addDays(r.protectedUntil, a.days ?? 30) } : r)) : s.registrations,
+        notices: notice(s, `Dana ${a.grant ? "granted" : "declined"} the ${ext.customer} extension`, a.grant ? `${a.days} more days` : a.reason ?? "", "/queue/extensions"),
+        activity: log(s, a.grant ? `${CHIEF} granted a second extension on ${ext.customer} (${a.days} days)` : `${CHIEF} declined the second extension on ${ext.customer}`, "/queue/extensions"),
+        chiefFeed: chiefLog(s, a.grant ? `You granted ${ext.customer} ${a.days} more days` : `You declined the ${ext.customer} extension`, "/c/approvals/done"),
+      }
+    }
+    case "chiefApp": {
+      const app = s.applications.find((x) => x.id === a.id)!
+      const id = app.company.toLowerCase().replace(/[^a-z]/g, "")
+      return {
+        ...s,
+        applications: s.applications.map((x) => (x.id === a.id ? { ...x, status: a.accept ? "accepted" : "rejected", outcomeNote: a.accept ? `Accepted by ${CHIEF} at ${a.tier}` : a.reason } : x)),
+        partners: a.accept
+          ? [...s.partners, { id, name: app.company, program: app.program, tier: a.tier!, region: app.region, assigned: true, status: "onboarding", quality: 0.7, pipeline: 0, wonThisYear: 0, lastActivity: stamp(), contact: app.applicant }]
+          : s.partners,
+        onboarding: a.accept
+          ? [{ partnerId: id, acceptedAt: stamp(), eligible: false, firstDeal: false, idleDays: 0, steps: seed.onboardingSteps([0, 2], [0, 2], [0, 3], ["Partner agreement (sent just now)", "Tax form, Certificate of insurance", "Complete profile, Add users, Registration basics"]) }, ...s.onboarding]
+          : s.onboarding,
+        notices: notice(s, `Dana ${a.accept ? "accepted" : "declined"} ${app.company}`, a.accept ? `Starting tier: ${a.tier}. Onboarding started with you` : a.reason ?? "", "/partners/onboarding"),
+        activity: log(s, a.accept ? `${CHIEF} accepted ${app.company} at ${a.tier}; onboarding started` : `${CHIEF} declined ${app.company}'s application`, "/partners/onboarding"),
+        chiefFeed: chiefLog(s, a.accept ? `You accepted ${app.company} as a ${a.tier} partner` : `You declined ${app.company}`, "/c/approvals/done"),
+      }
+    }
+    case "chiefDeal": {
+      const reg = s.registrations.find((r) => r.id === a.id)!
+      if (a.action === "nudge")
+        return {
+          ...s,
+          notices: notice(s, `Dana asked you to decide ${reg.customer}`, a.message ?? "It's past 80% of its review deadline", `/registration/${reg.id}`, "bad"),
+          chiefFeed: chiefLog(s, `You asked Jordan Lee to decide ${reg.customer} today`, `/c/approval/reg-${reg.id}`),
+        }
+      const approve = a.action === "approve"
+      return {
+        ...s,
+        registrations: s.registrations.map((r) =>
+          r.id !== a.id ? r : approve
+            ? { ...r, state: "approved", decision: { by: "you", actor: CHIEF, action: "approved", at: stamp(), message: a.message }, crm: { opportunityId: `006Q80000${a.id.replace("REG-", "")}New`, role: r.program === "Services" ? "Sourced" : "Reseller", sync: "synced", linked: "new" }, protectedUntil: addDays(NOW.toISOString().slice(0, 10), 90), crmStage: "Discovery" }
+            : { ...r, state: "rejected", decision: { by: "you", actor: CHIEF, action: "rejected", at: stamp(), reason: a.reason, message: a.message } },
+        ),
+        notices: notice(s, `Dana ${approve ? "approved" : "rejected"} ${reg.customer}`, "Escalated at 80% of its review deadline", `/registration/${reg.id}`),
+        activity: log(s, `${CHIEF} ${approve ? "approved" : "rejected"} ${reg.customer} for ${partnerName(s, reg.partnerId)} (escalated)`, `/registration/${reg.id}`),
+        partnerFeed: reg.partnerId === "ridgeway" ? feed(s, `Dana Ortiz ${approve ? "approved" : "didn't approve"} ${reg.customer}`, `/p/deal/${reg.id}`, reg.rep) : s.partnerFeed,
+        chiefFeed: chiefLog(s, `You ${approve ? "approved" : "rejected"} ${reg.customer} for ${partnerName(s, reg.partnerId)}`, "/c/approvals/done"),
+      }
+    }
+    case "chiefRequest": {
+      const r = s.requests.find((x) => x.id === a.id)!
+      // An approved rule change becomes a new version of each program's rules and takes effect straight away.
+      const programRules = { ...s.programRules }
+      if (a.approve && r.kind === "rule" && r.programs !== "all")
+        for (const p of r.programs) {
+          const cur = programRules[p]
+          programRules[p] = { ...cur, version: cur.version + 1, autoApproveTop: 75_000, history: [{ version: cur.version + 1, at: stamp(), by: `${CHIEF} approved ${r.from}'s change`, note: r.proposed }, ...cur.history] }
+        }
+      const scope = r.programs === "all" ? "every program" : r.programs.map((p) => `the ${p} program`).join(", ")
+      return {
+        ...s,
+        requests: s.requests.map((x) => (x.id === a.id ? { ...x, status: a.approve ? "approved" : "declined", note: a.note } : x)),
+        programRules,
+        agentLevels: a.approve && r.kind === "autonomy" ? { ...s.agentLevels, "deal-desk": "A4" } : s.agentLevels,
+        notices: a.approve && r.kind === "rule" ? notice(s, "Program rules changed", `${r.title}. Applies to ${scope}, whoever looks after the partner.`, "/home") : s.notices,
+        activity: a.approve && r.kind === "rule" ? log(s, `${CHIEF} approved a rule change for ${scope}: ${r.proposed}`) : s.activity,
+        chiefFeed: chiefLog(s, `You ${a.approve ? "approved" : "declined"}: ${r.title}`, "/c/program"),
+      }
+    }
+    case "toggleAgent":
+      return {
+        ...s,
+        pausedAgents: s.pausedAgents.includes(a.id) ? s.pausedAgents.filter((x) => x !== a.id) : [...s.pausedAgents, a.id],
+        chiefFeed: chiefLog(s, `You ${s.pausedAgents.includes(a.id) ? "resumed" : "paused"} the ${agentSeed.find((x) => x.id === a.id)?.name ?? a.id}`, "/c/program"),
+      }
+    case "chiefAssign": {
+      const p = s.partners.find((x) => x.id === a.partnerId)!
+      const from = p.manager ?? (p.assigned ? "Jordan Lee" : "Not assigned")
+      const toJordan = a.to === "Jordan Lee"
+      const fromJordan = from === "Jordan Lee"
+      return {
+        ...s,
+        partners: s.partners.map((x) => (x.id === a.partnerId ? { ...x, assigned: toJordan, manager: toJordan ? undefined : a.to } : x)),
+        assignments: [{ id: `as${Date.now()}`, partnerId: p.id, partner: p.name, from, to: a.to, reason: a.reason, at: stamp() }, ...s.assignments],
+        notices: toJordan || fromJordan
+          ? notice(s, toJordan ? `Dana assigned ${p.name} to you` : `Dana moved ${p.name} to ${a.to}`, a.reason, toJordan ? `/partner/${p.id}` : "/partners", toJordan ? "info" : "warn")
+          : s.notices,
+        activity: toJordan || fromJordan ? log(s, toJordan ? `${CHIEF} assigned ${p.name} to you` : `${CHIEF} moved ${p.name} to ${a.to}`) : s.activity,
+        chiefFeed: chiefLog(s, `You moved ${p.name} from ${from} to ${a.to}`, "/c/team"),
+      }
+    }
+    case "dispute": {
+      const reg = s.registrations.find((r) => r.id === a.regId)!
+      return {
+        ...s,
+        disputes: [{ id: `D-${100 + s.disputes.length}`, regId: a.regId, by: a.by, reason: a.reason, at: stamp() }, ...s.disputes],
+        partnerFeed: feed(s, `${a.by} disputed the credit on ${reg.customer}`, `/p/deal/${reg.id}`, reg.rep),
+        notices: notice(s, "Credit dispute", `${partnerName(s, reg.partnerId)} · ${reg.customer}`, `/registration/${reg.id}`, "warn"),
+      }
+    }
   }
 }
 
@@ -247,6 +518,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     raw(a)
     // The CRM write happens after the decision; its status is tracked separately (D5).
     if (a.type === "approve") setTimeout(() => raw({ type: "synced", id: a.id }), 1400)
+    if (a.type === "partnerRegister" && a.reg.crm) setTimeout(() => raw({ type: "synced", id: a.reg.id }), 1400)
   }, [])
   const value = useMemo<Store>(
     () => ({ state, dispatch, partner: (id) => state.partners.find((p) => p.id === id) }),
@@ -268,16 +540,26 @@ export const slaPct = (r: Registration) => Math.min(100, Math.round((r.usedHours
 export function useQueue() {
   const { state } = useStore()
   return useMemo(() => {
+    // The partner manager only works the partners assigned to them.
+    const mine = (partnerId: string) => !!state.partners.find((p) => p.id === partnerId)?.assigned
     const toDecide = state.registrations
-      .filter((r) => r.state === "under_review")
+      .filter((r) => r.state === "under_review" && mine(r.partnerId))
       .sort((a, b) => slaPct(b) - slaPct(a))
-    const waiting = state.registrations.filter((r) => r.state === "info_requested")
-    const extensions = state.extensions.filter((e) => e.status === "pending")
+    const waiting = state.registrations.filter((r) => r.state === "info_requested" && mine(r.partnerId))
+    const extensions = state.extensions.filter((e) => e.status === "pending" && mine(e.partnerId) && e.previousExtensions === 0)
+    const withChief = state.extensions.filter((e) => e.status === "pending" && mine(e.partnerId) && e.previousExtensions > 0)
     const decided = state.registrations
-      .filter((r) => r.decision && r.state !== "info_requested" && r.state !== "under_review")
-      .sort((a, b) => (b.decision!.at > a.decision!.at ? 1 : -1))
+      .filter((r) => r.decision && r.state !== "info_requested" && r.state !== "under_review" && mine(r.partnerId))
+      .sort((a, b) => new Date(b.decision!.at).getTime() - new Date(a.decision!.at).getTime())
     const atRisk = toDecide.filter((r) => slaPct(r) >= 80)
     const apps = state.applications.filter((a) => a.status === "new")
-    return { toDecide, waiting, extensions, decided, atRisk, apps }
+    return { toDecide, waiting, extensions, withChief, decided, atRisk, apps }
   }, [state])
+}
+
+/** A partner's open pipeline, added up from its open deals so it always matches what's listed and updates live. */
+export function pipelineOf(state: State, partnerId: string) {
+  return state.registrations
+    .filter((r) => r.partnerId === partnerId && ["approved", "under_review", "info_requested"].includes(r.state))
+    .reduce((n, r) => n + r.value, 0)
 }

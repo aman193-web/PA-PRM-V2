@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { ArrowRight, Bell, Bot, Briefcase, ChevronRight, Clock3, Inbox, Search, Send, Sparkles, Trophy, UserCheck, Wallet, X } from "lucide-react"
 import { toast } from "sonner"
-import { EmptyState, PageHeader, PageTabs, Panel, PartnerAvatar, RegStateBadge, SalesforceMark } from "@/components/common"
+import { EmptyState, PageHeader, PageTabs, Panel, PartnerAvatar, RegStateBadge, SalesforceMark, SourceTag } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -80,7 +80,7 @@ export function DealsList({ rows, showPartner = true }: { rows: Registration[]; 
                   <RegStateBadge reg={r} />
                   {r.decision?.action === "approved" && r.state !== "approved" && (
                     <span className="inline-flex items-center gap-1 text-[13.5px] text-muted-foreground">
-                      {r.decision.by === "rules" ? <><Bot className="size-3.5" /> Auto-approved</> : <><UserCheck className="size-3.5" /> Approved by you</>}
+                      {r.decision.by === "rules" ? <><Bot className="size-3.5" /> Auto-approved</> : <><UserCheck className="size-3.5" /> Approved by {r.decision.actor ?? "you"}</>}
                     </span>
                   )}
                   {r.decision?.action === "approved" && r.state === "approved" && r.decision.by === "you" && (
@@ -324,7 +324,8 @@ function LeadRow({ lead: l, onSend }: { lead: Lead; onSend: () => void }) {
       <div className="grid gap-4 px-5 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_auto] lg:items-center">
         <div className="min-w-0">
           <p className="text-[16px] font-semibold text-foreground">{l.company} <span className="font-normal text-muted-foreground">· ~{money(l.estValue)}</span></p>
-          <p className="text-[14px] text-muted-foreground">{l.contact}, {l.title} · {l.product} · {l.source} · {ago(l.receivedAt)}</p>
+          <p className="text-[14px] text-muted-foreground">{l.contact}, {l.title} · {l.product} · {ago(l.receivedAt)}</p>
+          <SourceTag source={l.source} className="mt-1.5" />
         </div>
         <div className="min-w-0 text-[14.5px]">
           {status && <p className="font-medium">{status}</p>}

@@ -34,6 +34,8 @@ export interface Partner {
   lastActivity: string
   since?: string
   people?: Person[]
+  /** Who looks after the partner when it isn't Jordan (set by the channel chief; added beyond the documents). */
+  manager?: string
 }
 
 export interface Person extends Contact {
@@ -155,6 +157,8 @@ export interface Decision {
   reason?: string
   message?: string
   seconds?: number
+  /** Set when someone other than the partner manager decided (e.g. the channel chief on an escalation). */
+  actor?: string
 }
 
 export interface Registration {
@@ -183,6 +187,8 @@ export interface Registration {
   /** Live Salesforce stage once a registration becomes an opportunity. */
   crmStage?: string
   lostReason?: string
+  /** The partner's answer to an info request; the SLA resumes from where it paused. */
+  infoReply?: { text: string; at: string; by: string }
 }
 
 export interface ExtensionRequest {
@@ -302,6 +308,8 @@ export interface Opportunity {
   touches: Touch[]
   reconciliation?: "matched" | "pending" | "mismatch"
   reconciliationNote?: string
+  /** What the channel chief decided on the last split proposal. */
+  proposalOutcome?: { approved: boolean; by: string; at: string; reason?: string }
 }
 
 export type HealthTrend = "rising" | "stalling" | "at_risk"
@@ -352,49 +360,49 @@ export const partners: Partner[] = [
   {
     id: "ridgeway", name: "Ridgeway IT", program: "Reseller", tier: "Gold", region: "North America · Central",
     assigned: true, status: "active", quality: 0.86, pipeline: 412000, wonThisYear: 318000, lastActivity: "2026-10-28T08:10:00",
-    since: "2021-03-15", people: [{ name: "Marcus Bell", title: "Partner sales lead", email: "marcus@ridgewayit.com", phone: "+1 312 555 0142", canRegister: true }, { name: "Jenna Ruiz", title: "Account executive", email: "jenna@ridgewayit.com", phone: "+1 312 555 0167", canRegister: true }, { name: "Paul Okafor", title: "CEO", email: "paul@ridgewayit.com", phone: "+1 312 555 0100" }],
-    contact: { name: "Marcus Bell", title: "Partner sales lead", email: "marcus@ridgewayit.com", phone: "+1 312 555 0142" },
+    since: "2021-03-15", people: [{ name: "Marcus Bell", title: "Partner sales rep", email: "marcus@ridgewayit.com", phone: "+1 312 555 0142", canRegister: true }, { name: "Jenna Ruiz", title: "Partner sales rep", email: "jenna@ridgewayit.com", phone: "+1 312 555 0167", canRegister: true }, { name: "Paul Okafor", title: "Partner executive", email: "paul@ridgewayit.com", phone: "+1 312 555 0100", canRegister: true }],
+    contact: { name: "Marcus Bell", title: "Partner sales rep", email: "marcus@ridgewayit.com", phone: "+1 312 555 0142" },
   },
   {
     id: "northpeak", name: "Northpeak Consulting", program: "Services", tier: "Platinum", region: "North America · East",
     assigned: true, status: "active", quality: 0.91, pipeline: 610000, wonThisYear: 540000, lastActivity: "2026-10-27T16:40:00",
-    since: "2019-09-02", people: [{ name: "Hannah Cho", title: "Alliance director", email: "hannah.cho@northpeak.co", phone: "+1 617 555 0186", canRegister: true }, { name: "Raj Mehta", title: "Solutions architect", email: "raj.mehta@northpeak.co", phone: "+1 617 555 0121" }],
-    contact: { name: "Hannah Cho", title: "Alliance director", email: "hannah.cho@northpeak.co", phone: "+1 617 555 0186" },
+    since: "2019-09-02", people: [{ name: "Hannah Cho", title: "Partner executive", email: "hannah.cho@northpeak.co", phone: "+1 617 555 0186", canRegister: true }, { name: "Raj Mehta", title: "Partner technical lead", email: "raj.mehta@northpeak.co", phone: "+1 617 555 0121" }],
+    contact: { name: "Hannah Cho", title: "Partner executive", email: "hannah.cho@northpeak.co", phone: "+1 617 555 0186" },
   },
   {
     id: "clearpath", name: "Clearpath Digital", program: "Referral", tier: "Silver", region: "North America · West",
     assigned: true, status: "active", quality: 0.78, pipeline: 156000, wonThisYear: 88000, lastActivity: "2026-10-28T07:55:00",
-    since: "2023-01-20", contact: { name: "Luis Ortega", title: "Founder", email: "luis@clearpath.digital", phone: "+1 415 555 0119" },
+    since: "2023-01-20", contact: { name: "Luis Ortega", title: "Partner executive", email: "luis@clearpath.digital", phone: "+1 415 555 0119" },
   },
   {
     id: "summit", name: "Summit Resale", program: "Reseller", tier: "Registered", region: "North America · Central",
     assigned: true, status: "active", quality: 0.66, pipeline: 74000, wonThisYear: 31000, lastActivity: "2026-10-26T11:20:00",
-    since: "2024-06-11", contact: { name: "Tara Quinn", title: "Account executive", email: "tara@summitresale.com", phone: "+1 214 555 0177" },
+    since: "2024-06-11", contact: { name: "Tara Quinn", title: "Partner sales rep", email: "tara@summitresale.com", phone: "+1 214 555 0177" },
   },
   {
     id: "atlas", name: "Atlas Integrators", program: "Services", tier: "Silver", region: "North America · West",
     assigned: true, status: "active", quality: 0.81, pipeline: 198000, wonThisYear: 126000, lastActivity: "2026-10-27T09:05:00",
-    since: "2022-04-04", contact: { name: "Ben Adler", title: "Practice lead", email: "ben.adler@atlasintegrators.com", phone: "+1 206 555 0131" },
+    since: "2022-04-04", contact: { name: "Ben Adler", title: "Partner sales rep", email: "ben.adler@atlasintegrators.com", phone: "+1 206 555 0131" },
   },
   {
     id: "orbitwise", name: "Orbitwise Solutions", program: "Reseller", tier: "Silver", region: "North America · East",
     assigned: true, status: "active", quality: 0.74, pipeline: 62000, wonThisYear: 97000, lastActivity: "2026-09-20T14:00:00",
-    since: "2022-11-18", contact: { name: "Nadia Brooks", title: "Sales director", email: "nadia@orbitwise.io", phone: "+1 646 555 0150" },
+    since: "2022-11-18", contact: { name: "Nadia Brooks", title: "Partner sales rep", email: "nadia@orbitwise.io", phone: "+1 646 555 0150" },
   },
   {
     id: "keystone", name: "Keystone Data", program: "Services", tier: "Registered", region: "North America · East",
     assigned: true, status: "onboarding", quality: 0.7, pipeline: 0, wonThisYear: 0, lastActivity: "2026-10-22T10:00:00",
-    contact: { name: "Owen Park", title: "Managing partner", email: "owen@keystonedata.com", phone: "+1 202 555 0164" },
+    contact: { name: "Owen Park", title: "Partner executive", email: "owen@keystonedata.com", phone: "+1 202 555 0164" },
   },
   {
     id: "mosaic", name: "Mosaic IT", program: "Reseller", tier: "Registered", region: "North America · Central",
     assigned: true, status: "onboarding", quality: 0.7, pipeline: 0, wonThisYear: 0, lastActivity: "2026-10-22T15:30:00",
-    contact: { name: "Rhea Kapoor", title: "Owner", email: "rhea@mosaic-it.com", phone: "+1 773 555 0108" },
+    contact: { name: "Rhea Kapoor", title: "Partner executive", email: "rhea@mosaic-it.com", phone: "+1 773 555 0108" },
   },
   {
     id: "harper", name: "Harper & Vance", program: "Referral", tier: "Registered", region: "North America · West",
     assigned: true, status: "onboarding", quality: 0.7, pipeline: 0, wonThisYear: 0, lastActivity: "2026-10-24T13:10:00",
-    contact: { name: "Grace Harper", title: "Partner", email: "grace@harpervance.com", phone: "+1 503 555 0127" },
+    contact: { name: "Grace Harper", title: "Partner executive", email: "grace@harpervance.com", phone: "+1 503 555 0127" },
   },
   {
     id: "bluefin", name: "Bluefin Cloud", program: "Technology", tier: "Gold", region: "Global",
@@ -643,6 +651,20 @@ export const pipelineRegistrations: Registration[] = [
     decision: { by: "rules", action: "approved", at: "2026-08-02T09:00:40", seconds: 40 }, crm: { opportunityId: "006Q8000016CdrV", role: "Reseller", sync: "synced", linked: "new" } }),
   past({ id: "REG-1820", partnerId: "clearpath", rep: "Luis Ortega", customer: "Lakeside Dental", product: "Analytics · Standard", value: 22000, closeDate: "2026-10-15", submittedAt: "2026-07-02T09:00:00", program: "Referral", state: "lost", crmStage: "Closed lost", lostReason: "Chose a competitor",
     decision: { by: "rules", action: "approved", at: "2026-07-02T09:00:38", seconds: 38 }, crm: { opportunityId: "006Q8000015LksD", role: "Referral", sync: "synced", linked: "new" } }),
+  past({ id: "REG-1790", partnerId: "ridgeway", rep: "Marcus Bell", customer: "Prairie Foods", product: "Analytics · Standard", value: 44000, closeDate: "2026-11-20", submittedAt: "2026-08-08T09:00:00", program: "Reseller", state: "approved", crmStage: "Negotiation", protectedUntil: "2026-11-06",
+    decision: { by: "you", action: "approved", at: "2026-08-08T13:20:00" }, crm: { opportunityId: "006Q8000018PrfD", role: "Reseller", sync: "synced", linked: "new" } }),
+  past({ id: "REG-1612", partnerId: "ridgeway", rep: "Marcus Bell", customer: "Lakeshore Hotels", product: "Analytics · Enterprise", value: 124000, closeDate: "2026-09-18", submittedAt: "2026-05-04T09:00:00", program: "Reseller", state: "won", crmStage: "Closed won",
+    decision: { by: "you", action: "approved", at: "2026-05-04T15:00:00" }, crm: { opportunityId: "006Q8000013LksH", role: "Sourced", sync: "synced", linked: "new" } }),
+  past({ id: "REG-1580", partnerId: "ridgeway", rep: "Jenna Ruiz", customer: "Brennan Logistics", product: "Platform · Enterprise", value: 96000, closeDate: "2026-07-30", submittedAt: "2026-04-10T09:00:00", program: "Reseller", state: "won", crmStage: "Closed won",
+    decision: { by: "you", action: "approved", at: "2026-04-10T14:00:00" }, crm: { opportunityId: "006Q8000012BrnL", role: "Reseller", sync: "synced", linked: "new" } }),
+  past({ id: "REG-1490", partnerId: "ridgeway", rep: "Marcus Bell", customer: "Union Dental Group", product: "Analytics · Standard", value: 58000, closeDate: "2026-05-12", submittedAt: "2026-02-16T09:00:00", program: "Reseller", state: "won", crmStage: "Closed won",
+    decision: { by: "rules", action: "approved", at: "2026-02-16T09:00:41", seconds: 41 }, crm: { opportunityId: "006Q8000011UndG", role: "Sourced", sync: "synced", linked: "new" } }),
+  past({ id: "REG-1402", partnerId: "ridgeway", rep: "Marcus Bell", customer: "Fairway Clinics", product: "Platform · Standard", value: 40000, closeDate: "2026-03-03", submittedAt: "2025-12-01T09:00:00", program: "Reseller", state: "won", crmStage: "Closed won",
+    decision: { by: "rules", action: "approved", at: "2025-12-01T09:00:39", seconds: 39 }, crm: { opportunityId: "006Q8000010FrwC", role: "Reseller", sync: "synced", linked: "new" } }),
+  past({ id: "REG-1701", partnerId: "ridgeway", rep: "Jenna Ruiz", customer: "Hillcrest Realty", product: "Analytics · Standard", value: 22000, closeDate: "2026-09-30", submittedAt: "2026-06-20T09:00:00", program: "Reseller", state: "lost", crmStage: "Closed lost", lostReason: "No budget this year",
+    decision: { by: "rules", action: "approved", at: "2026-06-20T09:00:42", seconds: 42 }, crm: { opportunityId: "006Q8000014HlcR", role: "Reseller", sync: "synced", linked: "new" } }),
+  past({ id: "REG-1955", partnerId: "ridgeway", rep: "Marcus Bell", customer: "Metro Transit Authority", product: "Platform · Enterprise", value: 35000, closeDate: "2027-02-28", submittedAt: "2026-10-05T10:00:00", program: "Reseller", state: "rejected",
+    decision: { by: "you", action: "rejected", at: "2026-10-05T15:40:00", reason: "Existing Brightline opportunity", message: "Our public-sector team has worked Metro Transit directly since the summer, so this can't be partner-sourced. Happy to bring you in for implementation if they need a partner." } }),
   past({ id: "REG-1650", partnerId: "atlas", rep: "Ben Adler", customer: "Redwood Utilities", product: "Platform · Enterprise", value: 54000, closeDate: "2026-09-30", submittedAt: "2026-05-01T09:00:00", program: "Services", state: "expired", protectedUntil: "2026-09-30",
     decision: { by: "you", action: "approved", at: "2026-05-01T15:00:00" }, crm: { opportunityId: "006Q8000014RdwU", role: "Implementation", sync: "synced", linked: "new" } }),
 ]
@@ -668,6 +690,10 @@ export interface Lead {
   declineReason?: string
   registrationId?: string
   update?: string
+  /** Partner-side detail: who inside the partner company owns it (R-LD-4). */
+  assignee?: string
+  industry?: string
+  region?: string
 }
 
 export const leads: Lead[] = [
@@ -685,6 +711,16 @@ export const leads: Lead[] = [
     suggestion: { partnerId: "northpeak", why: "Has retail experience and capacity this quarter." } },
   { id: "L-290", company: "Quartz Analytics", contact: "Mia Wong", title: "CTO", source: "Brightline website", product: "Platform", estValue: 60000, receivedAt: "2026-10-20T09:00:00", status: "accepted",
     partnerId: "northpeak", sentAt: "2026-10-20T10:00:00", update: "First call held Oct 26; demo booked for Nov 2." },
+  { id: "L-306", company: "Pioneer Hotels Group", contact: "Ravi Menon", title: "VP Technology", source: "Brightline website", product: "Analytics", estValue: 48000, receivedAt: "2026-10-28T08:20:00", status: "offered",
+    partnerId: "ridgeway", sentAt: "2026-10-28T09:00:00", acceptBy: "2026-10-30T09:00:00", industry: "Hospitality", region: "Chicago, IL",
+    suggestion: { partnerId: "ridgeway", why: "Ridgeway won Lakeshore Hotels this year and covers North America · Central." } },
+  { id: "L-307", company: "Lakeside Logistics", contact: "Erin Walsh", title: "Director of Operations", source: "Trade show", product: "Platform", estValue: 36000, receivedAt: "2026-10-27T16:00:00", status: "offered",
+    partnerId: "ridgeway", sentAt: "2026-10-27T17:30:00", acceptBy: "2026-10-29T17:30:00", industry: "Logistics", region: "Milwaukee, WI", assignee: "Marcus Bell",
+    suggestion: { partnerId: "ridgeway", why: "Marcus spoke with Erin at the Brightline booth; she asked for him by name." } },
+  { id: "L-293", company: "Harbor Point Marinas", contact: "Sofia Grant", title: "General manager", source: "Partner marketing", product: "Analytics", estValue: 21000, receivedAt: "2026-10-20T10:00:00", status: "accepted",
+    partnerId: "ridgeway", sentAt: "2026-10-21T09:00:00", industry: "Leisure", region: "Detroit, MI", assignee: "Marcus Bell", update: "Discovery call booked for Nov 4." },
+  { id: "L-288", company: "Coastal Credit Union", contact: "Dev Patel", title: "CIO", source: "Brightline website", product: "Platform", estValue: 32500, receivedAt: "2026-10-14T09:00:00", status: "converted",
+    partnerId: "ridgeway", sentAt: "2026-10-14T10:00:00", industry: "Financial services", region: "Columbus, OH", assignee: "Marcus Bell", registrationId: "REG-2039" },
   { id: "L-284", company: "Granite Labs", contact: "Sara Iqbal", title: "CISO", source: "Security summit", product: "Platform", estValue: 88000, receivedAt: "2026-08-01T09:00:00", status: "converted",
     partnerId: "northpeak", sentAt: "2026-08-01T10:00:00", registrationId: "REG-1912" },
 ]
@@ -715,9 +751,28 @@ export const extensions: ExtensionRequest[] = [
 
 export const applications: Application[] = [
   {
+    id: "APP-113", company: "Tidewater Systems", website: "tidewatersys.com", hq: "Chicago, IL", region: "North America · Central",
+    employees: 420, founded: 2004, program: "Reseller", products: ["Analytics", "Platform"],
+    applicant: { name: "Laura Chen", title: "Partner executive", email: "laura.chen@tidewatersys.com", phone: "+1 312 555 0188" },
+    appliedAt: "2026-10-24T10:00:00",
+    message: "We're moving our analytics practice from a competitor and bring 60 existing customers. We'd like to start at Platinum with an exclusive territory in the Chicago metro.",
+    agreements: [
+      { name: "Program terms", status: "accepted", detail: "Accepted on the application" },
+      { name: "Mutual NDA", status: "signed", detail: "Signed Oct 22, 2026" },
+      { name: "Partner agreement", status: "after_accept", detail: "Sent automatically when accepted" },
+    ],
+    checks: [
+      { label: "Not already a partner", status: "pass", detail: "No partner record with this name or domain" },
+      { label: "Company verified", status: "pass", detail: "Domain and business registration match" },
+      { label: "Region", status: "warn", detail: "Overlaps Ridgeway IT and Mosaic IT in North America · Central" },
+    ],
+    status: "escalated",
+    outcomeNote: "They want Platinum from day one and an exclusive Chicago territory. That's beyond what I can approve, and it overlaps Ridgeway. Your call. — Jordan",
+  },
+  {
     id: "APP-118", company: "Lattice Networks", website: "latticenet.io", hq: "Denver, CO", region: "North America · Central",
     employees: 120, founded: 2011, program: "Reseller", products: ["Analytics", "Platform"],
-    applicant: { name: "Priya Raman", title: "VP Alliances", email: "priya@latticenet.io", phone: "+1 720 555 0193" },
+    applicant: { name: "Priya Raman", title: "Partner executive", email: "priya@latticenet.io", phone: "+1 720 555 0193" },
     appliedAt: "2026-10-26T15:20:00",
     message: "We resell data infrastructure to mid-market manufacturers across the Mountain region and want to add Brightline Analytics to our portfolio. Our team includes four certified data engineers.",
     agreements: [
@@ -735,7 +790,7 @@ export const applications: Application[] = [
   {
     id: "APP-117", company: "Fjordline Analytics", website: "fjordline.no", hq: "Oslo, Norway", region: "EMEA · Nordics",
     employees: 35, founded: 2018, program: "Referral", products: ["Analytics"],
-    applicant: { name: "Erik Solberg", title: "CEO", email: "erik@fjordline.no", phone: "+47 22 55 01 40" },
+    applicant: { name: "Erik Solberg", title: "Partner executive", email: "erik@fjordline.no", phone: "+47 22 55 01 40" },
     appliedAt: "2026-10-25T08:45:00",
     message: "We advise Nordic retailers on analytics and often get asked which platform to buy. We'd like to refer customers to Brightline.",
     agreements: [
@@ -753,7 +808,7 @@ export const applications: Application[] = [
   {
     id: "APP-115", company: "Quarry Labs", website: "quarrylabs.com", hq: "Austin, TX", region: "North America · Central",
     employees: 60, founded: 2016, program: "Services", products: ["Platform"],
-    applicant: { name: "Dev Malhotra", title: "Head of Partnerships", email: "dev@quarrylabs.com", phone: "+1 512 555 0172" },
+    applicant: { name: "Dev Malhotra", title: "Partner executive", email: "dev@quarrylabs.com", phone: "+1 512 555 0172" },
     appliedAt: "2026-10-23T12:10:00",
     message: "Implementation partner for analytics platforms. We've delivered 30+ projects for logistics and retail companies.",
     agreements: [
