@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, type ReactNode } from "react"
 import {
   Award, Bell, BookOpen, Briefcase, Home, Inbox, KeyRound, LogOut, Mail, Moon, Phone, Plus, Route, Search, ShieldCheck, Sparkles, Sun, TrendingUp, Users,
 } from "lucide-react"
-import { HubLink, HubMenuLink, Logo } from "@/components/common"
+import { Logo } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
@@ -168,7 +168,6 @@ function UserMenu({ onSignOut }: { onSignOut: () => void }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => go("/p/journeys")}><Route /> The three journeys</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => go("/p/access")}><ShieldCheck /> Your access</DropdownMenuItem>
-        <DropdownMenuItem asChild><HubMenuLink /></DropdownMenuItem>
         {isExec && <DropdownMenuItem onSelect={() => go("/p/team")} className="lg:hidden"><Users /> Team</DropdownMenuItem>}
         <DropdownMenuItem onSelect={() => go("/p/resources")} className="lg:hidden"><BookOpen /> Resources</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
@@ -256,7 +255,6 @@ export function PartnerShell({ section, children, onSignOut }: { section: string
           <a href="#/p/access" className={cn("flex items-center gap-2 rounded-[10px] px-3 py-2 text-[14.5px] text-muted-foreground hover:bg-muted hover:text-foreground", section === "access" && "bg-muted text-foreground")}>
             <KeyRound className="size-4" /> Your access
           </a>
-          <HubLink />
         </div>
       </aside>
 

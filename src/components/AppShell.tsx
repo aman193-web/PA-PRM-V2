@@ -1,7 +1,7 @@
 import { useState, type ComponentProps, type ReactNode } from "react"
 import { Activity, Bell, Briefcase, Home, Inbox, LogOut, Moon, PieChart, Route, Search, Sparkles, Sun, Users } from "lucide-react"
 import { useTheme } from "@/lib/theme"
-import { HubLink, HubMenuLink, Logo, SalesforceMark } from "@/components/common"
+import { Logo, SalesforceMark } from "@/components/common"
 import { GlobalSearch } from "@/components/Search"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { useSalesforce } from "@/screens/Salesforce"
@@ -122,7 +122,6 @@ function UserMenu({ onSignOut }: { onSignOut: () => void }) {
         <DropdownMenuItem onSelect={() => go("/journeys")}>
           <Route /> The three journeys
         </DropdownMenuItem>
-        <DropdownMenuItem asChild><HubMenuLink /></DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
           {resolvedTheme === "dark" ? <Sun /> : <Moon />} {resolvedTheme === "dark" ? "Light" : "Dark"} theme
         </DropdownMenuItem>
@@ -196,7 +195,6 @@ export function AppShell({ section, children, onSignOut }: { section: string; ch
           <a href="#/journeys" className={cn("flex items-center gap-2 rounded-[10px] px-3 py-2 text-[14.5px] text-muted-foreground hover:bg-muted hover:text-foreground", section === "journeys" && "bg-muted text-foreground")}>
             <Route className="size-4" /> The three journeys
           </a>
-          <HubLink />
         </div>
       </aside>
 
