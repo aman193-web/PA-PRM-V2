@@ -1,7 +1,7 @@
-import type { ComponentProps, ReactNode } from "react"
+import type { ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { Tabs as TabsPrimitive } from "radix-ui"
-import { AlertTriangle, ArrowLeft, CalendarDays, Check, ExternalLink, Globe, Library, Megaphone, MonitorPlay, Pause, Sparkles, Tag, X } from "lucide-react"
+import { AlertTriangle, ArrowLeft, CalendarDays, Check, Globe, Megaphone, MonitorPlay, Pause, Sparkles, Tag, X } from "lucide-react"
 import type { Check as CheckT, Registration } from "@/data/model"
 import { hoursLeft, initials } from "@/lib/format"
 import { slaPct } from "@/store"
@@ -343,26 +343,8 @@ export function PageTabs({ value, onChange, items, label }: { value: string; onC
   )
 }
 
-/** The PRM Knowledge Hub, served by this app at /hub/. It opens in its own tab so the demo data stays put. */
+/** The PRM Knowledge Hub, served by this app at /hub/. Linked from the welcome screen only. */
 export const KNOWLEDGE_HUB = "./hub/"
-
-/** Sidebar link to the hub, styled like "The three journeys". */
-export function HubLink() {
-  return (
-    <a href={KNOWLEDGE_HUB} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-[10px] px-3 py-2 text-[14.5px] text-muted-foreground hover:bg-muted hover:text-foreground">
-      <Library className="size-4" /> Knowledge hub <ExternalLink className="ml-auto size-3.5 opacity-70" />
-    </a>
-  )
-}
-
-/** Account-menu item for the hub; pass it inside a DropdownMenuItem with asChild. */
-export function HubMenuLink(props: ComponentProps<"a">) {
-  return (
-    <a {...props} href={KNOWLEDGE_HUB} target="_blank" rel="noreferrer">
-      <Library /> Knowledge hub <ExternalLink className="ml-auto opacity-70" />
-    </a>
-  )
-}
 
 /** Marks something we added as standard practice where the source documents are silent. */
 export function AddedTag({ className, short }: { className?: string; short?: boolean }) {

@@ -14,7 +14,7 @@ The app opens on a demo-only **Choose a portal** page.
 - Pick a role to sign in. The address bar shows who's signed in, e.g. `?role=channel-chief`.
 - **Sign out · switch role** keeps your changes, so actions carry across portals. For example, register a deal as Marcus and it's waiting in Jordan's queue.
 - A browser refresh resets everything.
-- The **PRM Knowledge Hub** (personas, permissions, rules, flows and decisions) is part of this app at `/hub/`. It's linked from the Choose a portal header and from every portal's sidebar and account menu. It opens in a new tab, so the demo data isn't reset.
+- The **PRM Knowledge Hub** (personas, permissions, rules, flows and decisions) is part of this app at `/hub/`. It's linked from the Choose a portal header only, and opens in a new tab.
 
 Names and companies are illustrative.
 
