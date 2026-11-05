@@ -1,13 +1,10 @@
 import { useState } from "react"
-import { ArrowRight, BookOpen, Building2, ExternalLink, FlaskConical, Loader2, Moon, Store, Sun } from "lucide-react"
-import { Logo } from "@/components/common"
+import { ArrowRight, Building2, ExternalLink, FlaskConical, Library, Loader2, Moon, Store, Sun } from "lucide-react"
+import { KNOWLEDGE_HUB, Logo } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "@/lib/theme"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
-
-/** The PRM Knowledge Hub: personas, permissions, rules, flows and decisions behind these portals. */
-const KNOWLEDGE_HUB = "https://claude.ai/artifact/PTpRYLVtputzZd6fENw48G"
 
 export type DemoRole = "pam" | "chief" | "pexec" | "rep"
 
@@ -71,7 +68,7 @@ export function Welcome({ onPick }: { onPick: (r: DemoRole) => void }) {
           <span className="flex-1" />
           <Button variant="outline" asChild className="h-9 gap-2 text-[14.5px]">
             <a href={KNOWLEDGE_HUB} target="_blank" rel="noreferrer">
-              <BookOpen className="size-4 text-primary" /> <span className="hidden sm:inline">Knowledge hub</span><span className="sm:hidden">Hub</span> <ExternalLink className="size-3.5 text-muted-foreground" />
+              <Library className="size-4 text-primary" /> <span className="hidden sm:inline">Knowledge hub</span><span className="sm:hidden">Hub</span> <ExternalLink className="size-3.5 text-muted-foreground" />
             </a>
           </Button>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-soft px-3 py-1 text-[13.5px] font-semibold text-amber-ink">
