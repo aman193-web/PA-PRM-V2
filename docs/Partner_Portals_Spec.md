@@ -1,7 +1,7 @@
-# Partner portals: Partner Executive and Partner Sales Rep
+# Partner portals: Executive, Sales Rep, Marketer and Technical Lead
 
 **Prototype:** `prm-partner-manager`, branch `feature/partner-portals`
-**Written:** 30 Oct 2026
+**Written:** 30 Oct 2026 · marketer and technical lead added 10 Nov 2026
 
 **Built on:**
 - BRD personas and permission matrix (via the PRM Knowledge Hub)
@@ -13,7 +13,10 @@
 
 - **Paul Okafor, CEO:** the partner executive.
 - **Marcus Bell, partner sales lead:** the sales rep.
+- **Priya Raman, marketing manager:** the partner marketer (sections 8 and 10).
 - **Jordan Lee:** their partner manager at Brightline.
+
+**Second example company:** Northpeak Consulting, a Platinum services partner. **Raj Mehta, solutions architect**, is the partner technical lead (sections 9 and 10), as in the persona document. Hannah Cho is Northpeak's admin.
 
 ---
 
@@ -187,3 +190,88 @@ These are tagged in the UI where they appear:
 - Tier requirements and benefits are **example program terms**.
 - MDF, lead sharing, disputes and certifications are Stage 2 previews.
 - Rep roles inside a partner company: Sales rep, Admin, Marketer and Technical.
+
+---
+
+## 8. Partner marketer (Priya Raman, Ridgeway IT · Stage 2)
+
+| | |
+|---|---|
+| Main job | Run campaigns that produce pipeline |
+| Main number | Pipeline from my campaigns (open deals registered from her leads), plus won revenue |
+| Main action | Launch a tracked campaign |
+| Device | Laptop |
+| Signs in with | Work-email link or Ridgeway's SSO. Invited by Paul Okafor |
+
+**Access**
+
+| Action | Priya | Source |
+|---|---|---|
+| Pick a Brightline content kit and launch a campaign with her own tracked link | Yes | Personas · IN-01 |
+| Add Ridgeway's logo in the approved area and publish approved claims, with the partnership disclosed | Yes | Publish content |
+| Edit claims or publish unapproved content | **No**: claims are locked; the Program agent checks her intro | Publish content |
+| See her campaigns' clicks, leads and the pipeline they produced | Own campaigns | See own company deals (mkt: own campaigns) |
+| See Ridgeway's deals, credit or pricing | **No** | R-SEC-2 |
+| Hand campaign leads to a Ridgeway rep | Yes | Personas (hands off to rep) |
+| Register deals | **No**: the rep she hands a lead to registers it | BRD persona |
+| Request MDF and file claims | Yes | Request MDF |
+| Approve funds | **No**: the channel chief approves every request and claim | R-APR-4, R-APR-7 |
+
+**Flows**
+1. **Launch a campaign (three steps).** Pick a kit, then make it Ridgeway's: name, channels, start date, a personal intro of up to 280 characters, and the logo in the approved area. The Program agent flags claims in the intro that Brightline hasn't approved, such as percentages, "guaranteed" or "fastest", and blocks publishing until they're removed. Publishing creates her tracked link.
+2. **Hand a lead to a rep.** Leads from her link stay with Ridgeway; Brightline doesn't see them until a rep registers the deal (SL-05, R-LD-8). For each lead, AI suggests a rep and why, the same as R-LD-7, and she can pick anyone. The rep registers the lead with the customer pre-filled, or hands it back with a reason. A registered deal counts as the campaign's pipeline.
+3. **Fund it and claim it.** She requests funds within Ridgeway's yearly allowance ($10,000 at Gold, example terms). Dana Ortiz approves or declines, and Jordan is told. After the campaign runs, she claims with an invoice; the tracked-link results are attached for her. Dana approves the claim and payment follows.
+
+**Screens:** Home · Campaigns (live and scheduled, drafts, ended) and campaign detail (funnel, deals and leads it produced, tracked link, locked claims, funds) · Launch a campaign · Campaign leads (to hand off, with reps, became deals) · Funds (MDF) · Resources (marketing assets, no pricing) · Your access · Three journeys.
+
+---
+
+## 9. Partner technical lead (Raj Mehta, Northpeak Consulting · Stage 2)
+
+| | |
+|---|---|
+| Main job | Get certified, and get credit for the influence delivery creates |
+| Main number | Influenced revenue: closed-won deals he delivered on, matched to Salesforce, shown with Northpeak's credit on them |
+| Main action | Log a delivery milestone |
+| Device | Laptop and phone |
+| Signs in with | Work-email link or Northpeak's SSO. Invited by Hannah Cho |
+
+**Access**
+
+| Action | Raj | Source |
+|---|---|---|
+| See Northpeak deals he works on, with their joint plans | Deals he worked | See own company deals (tech) |
+| See Northpeak deals he doesn't work on | **No** | R-SEC-2 |
+| Log delivery milestones, recorded as touches | Yes, once the deal has an opportunity | Log delivery · R-CR-13 |
+| Edit or delete a touch | **No**: touches are permanent evidence | Touch entity |
+| Climb the skills ladder | Yes | R-GR-3, R-GR-4 |
+| See influenced revenue and Northpeak's credit | Yes, Northpeak's share only | R-CR-5 |
+| Register deals, answer review questions, change credit | **No** | BRD persona · R-CR-2 |
+
+**Flows**
+1. **Climb the ladder.** Learned (course), Certified (exam; renews every 2 years, per Impartner's training slide), Sell-Ready (a workshop, design sign-off or pilot logged on a real deal in that product, R-GR-4), Proven (automatic when that deal closes won). Certificates earn nothing on their own (R-GR-1); they raise Northpeak's capability score, which Brightline uses to rank partners (R-CS-2).
+2. **Deliver and log.** Joint-plan tasks have owners and dates, shared with Brightline's account executive and the customer. Marking a task done logs a milestone: a touch on the Salesforce opportunity with his name. Jordan sees it on the opportunity page, and the attribution agent uses it as evidence. Deals still in review, such as Kestrel Energy, can't be logged against yet (G40).
+3. **See influence.** Influenced revenue, Northpeak's credit by role and share, and his milestones as evidence. Other partners appear only as a count. Disputes go to Jordan (Stage 2).
+
+**Screens:** Home · Deals you work on and deal detail (joint plan, delivery timeline, Northpeak's credit) · Log a milestone · Skills (ladder, evidence, exam, company capability) · Influence · Resources (technical, no pricing) · Your access · Three journeys.
+
+---
+
+## 10. What syncs across portals (marketer and technical lead)
+
+| Action | Where it shows |
+|---|---|
+| Priya hands a campaign lead to Marcus | Marcus: Leads → From Ridgeway marketing. Paul sees it too |
+| Marcus registers it | Priya: pipeline on the campaign and Home. Jordan: the registration, like any other |
+| Marcus hands it back | Priya: Leads → To hand off, with his reason |
+| Priya requests or claims funds | Dana: Approvals → Funds. Jordan: a notice. Paul: Program → MDF |
+| Dana decides | Priya: Funds, notifications and Home |
+| Raj logs a milestone | Jordan: the opportunity's partner touches ("logged by Raj Mehta") and a notice |
+| Raj passes an exam or logs delivery | Raj: skills ladder and Northpeak's capability score |
+
+**Added beyond the documents (tagged in the UI):** the AI rep suggestion for campaign leads, and the Program agent's check on the intro for unapproved claims.
+
+**Decisions recorded in the hub:** G37 (the channel chief approves funds), G38 (campaign leads stay with the partner), G39 (how a campaign lead reaches a rep), G40 (log only once there's an opportunity) and G41 (the technical lead works at a services partner).
+
+**Not designed here:** asset engagement reporting and email opens (Impartner slide 6), Northpeak's own executive portal (Paul's portal shows that role), and a technical lead at a reseller (Ridgeway's Theo Grant is invited but not yet active).
+

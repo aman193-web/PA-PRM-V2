@@ -2,12 +2,12 @@ import { Check, KeyRound, Lock, X } from "lucide-react"
 import { EmptyState, PageHeader, Panel } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { go } from "@/lib/router"
-import { access, company } from "@/partner/data"
+import { access } from "@/partner/data"
 import { usePartner } from "@/partner/usePartner"
 
 /** What this role can and can't do, straight from the BRD permission matrix (via the PRM Knowledge Hub). */
 export function Access() {
-  const { me, isExec } = usePartner()
+  const { me, company, isExec } = usePartner()
   const a = access[me.role]
   return (
     <div className="space-y-6">
@@ -36,7 +36,7 @@ export function Access() {
             </ul>
           </Panel>
           <Panel title="How you sign in">
-            <p className="flex gap-3 text-[15.5px] text-foreground"><KeyRound className="mt-0.5 size-5 shrink-0 text-primary" /> Ridgeway's own SSO, or a sign-in link sent to your work email. {isExec ? "Brightline invited you when Ridgeway joined the program." : "Paul Okafor, Ridgeway's admin, invited you."}</p>
+            <p className="flex gap-3 text-[15.5px] text-foreground"><KeyRound className="mt-0.5 size-5 shrink-0 text-primary" /> {company.short}'s own SSO, or a sign-in link sent to your work email. {isExec ? `Brightline invited you when ${company.short} joined the program.` : `${company.admin}, ${company.short}'s admin, invited you.`}</p>
           </Panel>
         </div>
       </div>
@@ -45,16 +45,18 @@ export function Access() {
   )
 }
 
-export function NotForRole({ what }: { what: string }) {
+/** A page this role can't open. By default it's an admin page (program, team, agreements). */
+export function NotForRole({ what, why, back }: { what: string; why?: string; back?: { label: string; href: string } }) {
+  const { company } = usePartner()
   return (
     <div>
       <PageHeader title={what} />
       <Panel>
         <EmptyState
           icon={<Lock className="size-6" />}
-          title="Only Ridgeway's admin can open this"
-          body="Paul Okafor manages the program, team and agreements. Ask him if you need a change."
-          action={<Button variant="outline" onClick={() => go("/p/access")}>See what you can do</Button>}
+          title={why ? "Not part of your role" : `Only ${company.short}'s admin can open this`}
+          body={why ?? `${company.admin} manages the program, team and agreements. Ask them if you need a change.`}
+          action={<div className="flex flex-wrap justify-center gap-2">{back && <Button onClick={() => go(back.href)}>{back.label}</Button>}<Button variant="outline" onClick={() => go("/p/access")}>See what you can do</Button></div>}
         />
       </Panel>
     </div>

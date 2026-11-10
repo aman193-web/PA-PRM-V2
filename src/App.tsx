@@ -78,7 +78,7 @@ function Routes({ onSignOut }: { onSignOut: () => void }) {
   )
 }
 
-const roleSlug: Record<DemoRole, string> = { pam: "partner-manager", chief: "channel-chief", pexec: "partner-executive", rep: "partner-sales-rep" }
+const roleSlug: Record<DemoRole, string> = { pam: "partner-manager", chief: "channel-chief", pexec: "partner-executive", rep: "partner-sales-rep", mkt: "partner-marketer", tech: "partner-technical-lead" }
 
 export default function App() {
   // Demo data lives only in memory, and so does the sign-in: a page refresh is a clean start on the welcome page.
@@ -117,7 +117,7 @@ export default function App() {
     const who = parts[0] === "signin" ? (parts[1] as DemoRole) : null
     if (who === "pam") screen = <Login onSignIn={(to) => signIn("pam", to)} onBack={() => go("/welcome")} />
     else if (who === "chief") screen = <Login variant="chief" onSignIn={() => signIn("chief")} onBack={() => go("/welcome")} />
-    else if (who === "pexec" || who === "rep") screen = <PartnerLogin role={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
+    else if (who === "pexec" || who === "rep" || who === "mkt" || who === "tech") screen = <PartnerLogin role={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
     else screen = <Welcome onPick={(r) => signIn(r)} />
   } else if (role === "pam") {
     screen = <Routes onSignOut={signOut} />

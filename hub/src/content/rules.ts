@@ -66,6 +66,7 @@ export const rules: Rule[] = [
   r("R-CR-10", "credit", "Confidence labels", "Credit is labelled Verified, Partner-reported or Inferred. Executive views show Verified only by default.", "specified", [{ doc: "BRD", ref: "§9" }]),
   r("R-CR-11", "credit", "Credit disputes", "An evidence-based dispute with an SLA and a named decision owner.", "specified", [{ doc: "BRD", ref: "MP-07 (P1)" }], { requirementIds: ["MP-07"], stage: "2" }),
   r("R-CR-12", "credit", "Currency and FX", "Currency and FX policy need Finance sign-off.", "open", [{ doc: "Arch", ref: "§13" }]),
+  r("R-CR-13", "credit", "Delivery milestones are touches", "A technical lead's milestone is recorded as a touch on the Salesforce opportunity, with their name and the date. Touches are permanent evidence for credit. They can be logged once the registration is approved and has an opportunity.", "default", [{ doc: "Personas" }, { doc: "Deck", ref: "J-02" }, { doc: "Proto" }], { stage: "2", related: ["G40", "R-GR-4", "tech", "flow-j02"], tags: ["touch", "delivery", "milestone", "influence"] }),
 
   // ---- Approvals
   r("R-APR-1", "approvals", "Splits: PAM proposes, chief approves", "Nobody approves their own proposal.", "specified", [{ doc: "Personas" }, { doc: "Swim", ref: "J-02 step 4" }], { tags: ["who approves split"] }),
@@ -73,6 +74,7 @@ export const rules: Rule[] = [
   r("R-APR-3", "approvals", "Attribution model: chief proposes, CFO approves", "Past periods keep the model that was in force at the time.", "proposed", [{ doc: "Personas" }]),
   r("R-APR-4", "approvals", "Money always needs a human", "MDF, rewards, spiffs, rebates and tier changes are never automated.", "specified", [{ doc: "BRD", ref: "§10" }, { doc: "Personas" }], { tags: ["mdf", "rewards", "money"] }),
   r("R-APR-6", "approvals", "Rule changes name their programs", "Each rule change says which program(s) it covers. Approval creates a new rules version for each program and applies to every partner in it, whoever looks after them. Partner managers are told; they can't change rules.", "default", [{ doc: "Personas" }, { doc: "Proto" }], { related: ["G35", "configure-programs"] }),
+  r("R-APR-7", "approvals", "Funds: request before, claim after", "Partners request market development funds before a campaign and claim them after it with proof: an invoice plus the results from the tracked link. The channel chief approves both; the partner manager is told. No agent can approve money.", "default", [{ doc: "BRD", ref: "§10" }, { doc: "Personas" }, { doc: "Proto" }], { stage: "2", related: ["R-APR-4", "G37", "mkt", "chief"], tags: ["mdf", "claim", "funds", "budget"] }),
   r("R-APR-5", "approvals", "Bulk export needs approval", "People can export views they're allowed to see; bulk or raw data export needs approval; agents never export.", "default", [{ doc: "BRD", ref: "RT-04, §10" }], { related: ["G16"] }),
 
   // ---- Security
@@ -92,6 +94,7 @@ export const rules: Rule[] = [
   r("R-LD-4", "leads", "Who inside the partner accepts", "The lead goes to the partner company. The owner or admin assigns a rep, or it goes straight to a named rep when one is known.", "default", [{ doc: "Proto" }], { related: ["G26"] }),
   r("R-LD-5", "leads", "Consent before any AI contact", "AI first contact within 60 seconds only with consent, do-not-call checks, calling hours, jurisdiction rules and legal sign-off. No phone consent means email only; the AI identifies itself; opt-out stops all contact.", "specified", [{ doc: "BRD", ref: "SL-04, §7.8" }, { doc: "Arch", ref: "§8" }], { requirementIds: ["SL-04"], stage: "2", tags: ["consent", "ai calling", "do not call"] }),
   r("R-LD-7", "leads", "AI suggests the rep inside the partner", "When a lead reaches a partner, AI suggests which rep should own it and why: past wins in that industry, the product, the region they cover and their workload. The partner executive decides. Added beyond the documents.", "default", [{ doc: "Proto" }], { stage: "2", related: ["G33", "R-LD-4"] }),
+  r("R-LD-8", "leads", "Campaign leads stay with the partner", "A lead from the partner's own tracked link belongs to the partner (SL-05). Brightline sees campaign totals, never the contact, until a rep registers the deal. The marketer hands each lead to a rep, with the same AI rep suggestion as R-LD-7.", "default", [{ doc: "BRD", ref: "SL-05" }, { doc: "Proto" }], { stage: "2", related: ["G38", "G39", "R-LD-7", "mkt"] }),
   r("R-LD-6", "leads", "First contact even if the partner is slow", "If nobody accepts in time, the agent still makes first contact where lawful.", "specified", [{ doc: "BRD", ref: "SL-05" }], { stage: "2" }),
 
   // ---- Co-sell
@@ -104,6 +107,7 @@ export const rules: Rule[] = [
   r("R-GR-1", "growth", "Only verified outcomes create value", "Logins, downloads and courses earn nothing on their own. Value appears only when an action is matched to a verified outcome.", "specified", [{ doc: "Deck", ref: "J-04" }, { doc: "BRD", ref: "§8" }], { related: ["G18"] }),
   r("R-GR-2", "growth", "What arrives when", "Value feed, value engine and benefit progress (ME-01–03) in Stage 1B. Leaderboards, streaks, push, coach, badges and rewards in Stage 2.", "proposed", [{ doc: "Deck", ref: "D6" }], { requirementIds: ["ME-01", "ME-02", "ME-03"] }),
   r("R-GR-3", "growth", "Capability ladder", "Learned → Certified → Sell-Ready → Proven. Proven is automatic when a deal closes in that product.", "specified", [{ doc: "BRD", ref: "SC-01" }], { requirementIds: ["SC-01"], stage: "2" }),
+  r("R-GR-4", "growth", "Sell-Ready comes from delivery", "A certified person becomes Sell-Ready in a product when they log a workshop, design sign-off or pilot on a real deal in that product. Proven stays automatic when the deal closes won.", "proposed", [{ doc: "BRD", ref: "SC-01" }, { doc: "Proto" }], { stage: "2", related: ["R-GR-3", "tech"] }),
 
   // ---- Onboarding
   r("R-ONB-1", "onboarding", "Two onboarding milestones", "Apply → Accept → agreements, documents and tasks. \"Ready to register\" once those are done (needed by DR-03), and \"Activated\" at the first registered deal.", "default", [{ doc: "Personas" }, { doc: "BRD", ref: "§11" }], { related: ["G22"], tags: ["onboarding complete", "eligible to register"] }),

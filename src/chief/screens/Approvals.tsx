@@ -15,8 +15,10 @@ import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
 import { kindLabel, useApprovals, useRevenue, type Approval } from "@/chief/useChief"
 import { kindIcon, toneTile } from "@/chief/screens/Home"
+import { campaignStats, mdfSummary } from "@/partner/useMarketing"
+import { FundsBar } from "@/partner/screens/mkt/Funds"
 
-type Tab = "all" | "deal" | "split" | "extension" | "application" | "rules" | "done"
+type Tab = "all" | "deal" | "split" | "extension" | "application" | "funds" | "rules" | "done"
 
 // Fixed columns so every row lines up under the header: icon, request, type and sender, value, status, chevron.
 const approvalCols = "md:grid-cols-[40px_minmax(0,1fr)_200px_110px_130px_20px]"
@@ -24,7 +26,7 @@ const approvalCols = "md:grid-cols-[40px_minmax(0,1fr)_200px_110px_130px_20px]"
 export function Approvals({ tab }: { tab?: string }) {
   const approvals = useApprovals()
   const { state } = useStore()
-  const t = (["all", "deal", "split", "extension", "application", "rules", "done"].includes(tab ?? "") ? tab : "all") as Tab
+  const t = (["all", "deal", "split", "extension", "application", "funds", "rules", "done"].includes(tab ?? "") ? tab : "all") as Tab
   const match = (a: Approval) => t === "all" || a.kind === t || (t === "rules" && (a.kind === "rule" || a.kind === "autonomy"))
   const rows = approvals.filter(match)
   const n = (k: Tab) => approvals.filter((a) => k === "all" || a.kind === k || (k === "rules" && (a.kind === "rule" || a.kind === "autonomy"))).length
@@ -43,6 +45,7 @@ export function Approvals({ tab }: { tab?: string }) {
           { value: "split", label: "Credit splits", count: n("split"), hint: "Overrides of the program's credit model. A partner manager can't approve their own proposal." },
           { value: "extension", label: "Extensions", count: n("extension"), hint: "Second protection extensions. The partner manager decides the first one." },
           { value: "application", label: "Applications", count: n("application"), hint: "Companies a partner manager escalated: unusual tiers, territories or regions." },
+          { value: "funds", label: "Funds", count: n("funds"), hint: "Marketing development funds (MDF): partner requests before a campaign and claims after it. Money always needs a person (R-APR-4)." },
           { value: "rules", label: "Rules and AI", count: n("rules"), hint: "Changes to program rules and AI agent autonomy." },
           { value: "done", label: "Decided", icon: <CheckCircle2 />, count: done.length },
         ]}
@@ -361,6 +364,67 @@ function RequestApproval({ id }: { id: string }) {
   )
 }
 
+function FundsApproval({ id }: { id: string }) {
+  const { state, dispatch } = useStore()
+  const r = state.mdf.find((x) => x.id === id)
+  const [choice, setChoice] = useState<"approve" | "decline" | null>(null)
+  const [why, setWhy] = useState("")
+  if (!r || (r.status !== "submitted" && r.status !== "claimed")) return <Done title={r?.campaign ?? "Funds"} body={r ? `It's ${r.status.replace("_", " ")}.` : "We couldn't find it."} />
+  const claim = r.status === "claimed"
+  const p = state.partners.find((x) => x.id === r.companyId)
+  const funds = mdfSummary(state, r.companyId)
+  const c = state.campaigns.find((x) => x.id === r.campaignId)
+  const st = c ? campaignStats(state, c) : undefined
+  const paidBefore = funds.all.find((x) => x.status === "paid")
+  const amount = claim ? r.claim!.amount : r.amount
+  const submit = () => {
+    dispatch({ type: "chiefMdf", id: r.id, approve: choice === "approve", reason: choice === "decline" ? why.trim() : undefined })
+    toast.success(choice === "approve" ? (claim ? `${money(amount)} claim approved for payment` : `${money(amount)} approved for ${r.campaign}`) : `${claim ? "Claim" : "Request"} declined`, { description: `${r.requestedBy} at ${p?.name ?? "the partner"} is told now.` })
+    go("/c/approvals/done")
+  }
+  return (
+    <div>
+      <PageHeader
+        back={{ label: "Approvals", href: "/c/approvals/funds" }}
+        title={<span className="flex flex-wrap items-center gap-3">{r.campaign} <Badge className="border-0 bg-brand-soft text-primary">{claim ? "Funds claim" : "Funds request"}</Badge></span>}
+        sub={<>{p?.name} · {p?.tier} {p?.program.toLowerCase()} partner · from {r.requestedBy}, partner marketer · {ago(claim ? r.claim!.at : r.submittedAt)}</>}
+      />
+      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <div className="space-y-6">
+          <Panel title={claim ? "What they're claiming" : "What they're asking for"} sub="Market development funds: Brightline money for partner marketing">
+            <Facts rows={claim ? [
+              ["Claimed", money(r.claim!.amount)], ["Approved earlier", `${money(r.amount)} by ${r.decidedBy} on ${date(r.decidedAt!)}`],
+              ["Proof", r.claim!.proof.join(", ")], ["Results", r.claim!.results],
+            ] : [
+              ["Amount", money(r.amount)], ["Pays for", r.activity], ["Expected result", r.expected], ["Campaign", c ? `${c.status} · ${c.channels.join(", ")}` : "—"],
+            ]} />
+          </Panel>
+          {st && c && c.status !== "draft" && (
+            <Panel title="What the campaign has produced so far" sub="From the partner's tracked link">
+              <Facts rows={[["Clicks", c.clicks.toLocaleString("en-US")], ["Leads", String(st.leadCount)], ["Deals registered", String(st.regs.length)], ["Pipeline and won", `${money(st.pipeline)} open · ${money(st.wonValue)} won`]]} />
+            </Panel>
+          )}
+          <AiCard
+            who="Program agent"
+            headline={claim ? "Approve: the spend matches what you approved, and the results are attached." : funds.available >= 0 ? `Approve: within ${p?.name ?? "the partner"}'s ${p?.tier} allowance, using an approved kit.` : "Check: this goes over the yearly allowance."}
+            confidence={0.86}
+            evidence={claim
+              ? [`Claimed ${money(r.claim!.amount)} of the ${money(r.amount)} approved`, r.claim!.results, "Invoice attached"]
+              : [`${money(funds.available + r.amount)} of ${money(funds.allowance)} was available before this request`, paidBefore?.claim ? `Last funded campaign (${paidBefore.campaign}): ${paidBefore.claim.results}` : "First funded campaign this year", "Brightline-approved content kit; claims locked"]}
+          />
+          <Panel title={`${p?.name ?? "Partner"}'s funds this year`}><FundsBar {...funds} /></Panel>
+        </div>
+        <Decide ready={!!choice && (choice === "approve" || why.trim().length > 2)} tone={choice === "approve" ? "ok" : choice === "decline" ? "bad" : null} label={choice === "approve" ? (claim ? `Approve ${money(amount)} for payment` : `Approve ${money(amount)}`) : choice === "decline" ? "Decline with reason" : "Choose an option"} onSubmit={submit}>
+          <DecisionOption active={choice === "approve"} tone="ok" onClick={() => setChoice("approve")} icon={<Check />} label="Approve" sub={claim ? "Payment goes out with the next partner payment run" : "The partner can launch and claim it afterwards"} suggested />
+          <DecisionOption active={choice === "decline"} tone="bad" onClick={() => setChoice("decline")} icon={<X />} label="Decline" sub="The partner sees your reason" />
+          {choice === "decline" && <Textarea value={why} onChange={(ev) => setWhy(ev.target.value)} rows={3} className="text-[15.5px]" placeholder={`Why? ${r.requestedBy} sees this.`} />}
+          <p className="text-[13.5px] text-muted-foreground">Money always needs a person (R-APR-4). The Program agent advises; it can't approve.</p>
+        </Decide>
+      </div>
+    </div>
+  )
+}
+
 export function ApprovalDetail({ id = "" }: { id?: string }) {
   const [kind, ...rest] = id.split("-")
   const ref = rest.join("-")
@@ -369,5 +433,6 @@ export function ApprovalDetail({ id = "" }: { id?: string }) {
   if (kind === "ext") return <ExtensionApproval id={ref} />
   if (kind === "app") return <ApplicationApproval id={ref} />
   if (kind === "req") return <RequestApproval id={ref} />
+  if (kind === "mdf") return <FundsApproval id={ref} />
   return <Done title="Approval" body="We couldn't find it." />
 }

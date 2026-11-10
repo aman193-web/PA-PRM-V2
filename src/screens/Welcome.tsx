@@ -6,7 +6,7 @@ import { useTheme } from "@/lib/theme"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
 
-export type DemoRole = "pam" | "chief" | "pexec" | "rep"
+export type DemoRole = "pam" | "chief" | "pexec" | "rep" | "mkt" | "tech"
 
 interface RoleCard {
   id: DemoRole
@@ -18,7 +18,7 @@ interface RoleCard {
   tint: string
 }
 
-const sides: { key: string; label: string; org: string; icon: typeof Building2; roles: RoleCard[] }[] = [
+const sides: { key: string; label: string; org: string; icon: typeof Building2; showOrg?: boolean; roles: RoleCard[] }[] = [
   {
     key: "vendor", label: "Vendor side", org: "Brightline", icon: Building2,
     roles: [
@@ -27,22 +27,24 @@ const sides: { key: string; label: string; org: string; icon: typeof Building2; 
     ],
   },
   {
-    key: "partner", label: "Partner side", org: "Ridgeway IT · Gold reseller", icon: Store,
+    key: "partner", label: "Partner side", org: "Ridgeway IT and Northpeak Consulting", icon: Store, showOrg: true,
     roles: [
       { id: "pexec", name: "Paul Okafor", initials: "PO", role: "Partner executive", org: "Ridgeway IT", job: "Sees revenue, assigns leads, manages the team", tint: "bg-amber-soft text-amber-ink" },
       { id: "rep", name: "Marcus Bell", initials: "MB", role: "Partner sales rep", org: "Ridgeway IT", job: "Registers deals and sees his own credit", tint: "bg-brand-soft text-primary" },
+      { id: "mkt", name: "Priya Raman", initials: "PR", role: "Partner marketer", org: "Ridgeway IT", job: "Runs campaigns and requests marketing funds", tint: "bg-ok-soft text-ok" },
+      { id: "tech", name: "Raj Mehta", initials: "RM", role: "Partner technical lead", org: "Northpeak Consulting", job: "Gets certified and logs delivery for credit", tint: "bg-secondary text-foreground" },
     ],
   },
 ]
 
-function Row({ c, busy, onPick }: { c: RoleCard; busy: DemoRole | null; onPick: (r: DemoRole) => void }) {
+function Row({ c, busy, onPick, showOrg }: { c: RoleCard; busy: DemoRole | null; onPick: (r: DemoRole) => void; showOrg?: boolean }) {
   return (
     <li className="flex items-center gap-3 rounded-[12px] border bg-card p-3.5">
       <span className={cn("grid size-11 shrink-0 place-items-center rounded-full text-[15px] font-bold", c.tint)}>{c.initials}</span>
       <span className="min-w-0 flex-1">
         <b className="block text-[16px] leading-tight text-foreground">{c.role} <span className="font-normal text-muted-foreground">· {c.name}</span></b>
         <span className="mt-0.5 block text-[14px] text-muted-foreground">
-          {c.job} · <button type="button" onClick={() => go(`/signin/${c.id}`)} className="font-medium text-primary hover:underline">Sign-in page</button>
+          {showOrg && <span className="font-medium text-foreground">{c.org} · </span>}{c.job} · <button type="button" onClick={() => go(`/signin/${c.id}`)} className="font-medium text-primary hover:underline">Sign-in page</button>
         </span>
       </span>
       <Button className="h-10 shrink-0" onClick={() => onPick(c.id)} disabled={!!busy} aria-label={`Sign in as ${c.name}`}>
@@ -92,13 +94,13 @@ export function Welcome({ onPick }: { onPick: (r: DemoRole) => void }) {
                 <span className="text-[17px] font-semibold">{s.label}</span>
                 <span className="text-[14px] text-muted-foreground">· {s.org}</span>
               </h2>
-              <ul className="grid gap-2.5">{s.roles.map((c) => <Row key={c.id} c={c} busy={busy} onPick={pick} />)}</ul>
+              <ul className="grid gap-2.5">{s.roles.map((c) => <Row key={c.id} c={c} busy={busy} onPick={pick} showOrg={s.showOrg} />)}</ul>
             </section>
           ))}
         </div>
 
         <p className="mt-6 text-[14.5px] text-muted-foreground">
-          <b className="text-foreground">Try it:</b> register a deal over $50,000 as Marcus, then sign in as Jordan to find it in the review queue.
+          <b className="text-foreground">Try it:</b> register a deal over $50,000 as Marcus, then sign in as Jordan to find it in the review queue. Or hand a campaign lead to Marcus as Priya, and approve her funds request as Dana.
           For the team only, not part of the product. Names are illustrative.
         </p>
       </main>

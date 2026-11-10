@@ -1,11 +1,11 @@
 import { useState } from "react"
-import { ArrowLeft, ArrowRight, BadgeCheck, Check, KeyRound, Loader2, Mail, ShieldCheck, TrendingUp } from "lucide-react"
+import { ArrowLeft, ArrowRight, BadgeCheck, Check, KeyRound, Link2, Loader2, Mail, ShieldCheck, TrendingUp } from "lucide-react"
 import { toast } from "sonner"
 import { Logo } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { company, people, type PartnerRoleId } from "@/partner/data"
+import { companies, people, type PartnerRoleId } from "@/partner/data"
 
 const copy: Record<PartnerRoleId, { title: string; sub: string; stats: [string, string][]; signIn: string; invite: string; points: string[] }> = {
   rep: {
@@ -24,9 +24,47 @@ const copy: Record<PartnerRoleId, { title: string; sub: string; stats: [string, 
     invite: "Invited by Brightline when Ridgeway joined the program",
     points: ["All of Ridgeway's deals and credit, never another partner's", "You manage who on your team has access"],
   },
+  mkt: {
+    title: "Run campaigns that show up as pipeline.",
+    sub: "Pick a Brightline content kit, add Ridgeway's logo and share it with your own tracked link. Every lead and deal it produces is counted for you.",
+    stats: [["Approved", "content kits, ready to share"], ["Tracked", "clicks, leads and pipeline"], ["Funds", "requested and claimed in one place"]],
+    signIn: "Sign in to run campaigns and request funds.",
+    invite: "Invited by Paul Okafor, Ridgeway's admin",
+    points: ["Your campaigns and the pipeline they produced", "Only Brightline-approved claims are published"],
+  },
+  tech: {
+    title: "Get certified, deliver, and get credit for it.",
+    sub: "Log a delivery milestone in seconds. Each one is recorded as evidence on the deal, so the influence your work creates is credited to Northpeak.",
+    stats: [["Skills ladder", "from Learned to Proven"], ["30 seconds", "to log a milestone"], ["Influence", "credited on deals you worked"]],
+    signIn: "Sign in to see your deals, skills and influence.",
+    invite: "Invited by Hannah Cho, Northpeak's admin",
+    points: ["Only the Northpeak deals you work on", "Other partners' shares stay private"],
+  },
 }
 
 function Preview({ role }: { role: PartnerRoleId }) {
+  if (role === "mkt")
+    return (
+      <div className="w-full max-w-[420px] rounded-[18px] border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm">
+        <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#4fd18b]"><Link2 className="size-4" /> Live · your tracked link</span>
+        <b className="mt-3 block text-[19px] text-white">Hospitality analytics: Q4 emails</b>
+        <div className="mt-4 grid grid-cols-3 gap-3 text-[13.5px]">
+          {[["1,240", "clicks"], ["3", "leads"], ["1", "with a rep"]].map(([k, v]) => (
+            <span key={v} className="rounded-[10px] bg-white/[0.06] px-3 py-2 text-[#cfe0f7]"><b className="block text-[17px] text-white">{k}</b>{v}</span>
+          ))}
+        </div>
+      </div>
+    )
+  if (role === "tech")
+    return (
+      <div className="w-full max-w-[420px] rounded-[18px] border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm">
+        <span className="text-[13px] font-bold text-[#ffb359]">Platform skills ladder</span>
+        <div className="mt-3 grid grid-cols-4 gap-1.5">
+          {["Learned", "Certified", "Sell-Ready", "Proven"].map((l) => <span key={l} className="rounded-[8px] bg-[#ffb359] px-1 py-1.5 text-center text-[12px] font-bold text-[#2a1a00]">{l}</span>)}
+        </div>
+        <span className="mt-4 inline-flex items-center gap-2 text-[13.5px] text-[#cfe0f7]"><BadgeCheck className="size-4 text-[#4fd18b]" /> Go-live at Pinecrest Utilities recorded as a touch</span>
+      </div>
+    )
   if (role === "rep")
     return (
       <div className="w-full max-w-[420px] rounded-[18px] border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm">
@@ -55,6 +93,7 @@ function Preview({ role }: { role: PartnerRoleId }) {
 /** Partner sign-in: the partner's own SSO or a work-email link (BRD persona sign-in). Same layout as the PAM sign-in. */
 export function PartnerLogin({ role, onSignIn, onBack }: { role: PartnerRoleId; onSignIn: () => void; onBack: () => void }) {
   const me = people[role]
+  const company = companies[me.companyId]
   const c = copy[role]
   const [email, setEmail] = useState(me.email)
   const [busy, setBusy] = useState<string | null>(null)

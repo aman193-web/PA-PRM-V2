@@ -9,7 +9,7 @@ export const sourceDocs: { id: DocId; rank: number; title: string; date: string;
   { id: "Arch", rank: 5, title: "Architecture review", date: "24 Oct 2026 · proposed", what: "ADRs, state machines, APIs, failure handling", use: "Data ownership and failure rules" },
   { id: "PA-PRD", rank: 6, title: "PartnerAssistant headless PRD", date: "20 Sep 2026", what: "Earlier, different framing (9 roles, 7-stage lifecycle)", use: "Shown as the earlier view" },
   { id: "Brief", rank: 6, title: "Partner-side MVP brief", date: "14 Oct 2026", what: "Earlier scoping brief for a coding tool", use: "Shown as the earlier view" },
-  { id: "Proto", rank: 7, title: "PRM prototype: four portals", date: "5 Nov 2026", what: "Our design: Partner manager, Channel chief, Partner executive and Partner sales rep portals; values not in any document", use: "Assumptions and added standard practice" },
+  { id: "Proto", rank: 7, title: "PRM prototype: six portals", date: "10 Nov 2026", what: "Our design: Partner manager, Channel chief, Partner executive, Partner sales rep, Partner marketer and Partner technical lead portals; values not in any document", use: "Assumptions and added standard practice" },
   { id: "Impartner", rank: 7, title: "Impartner demo and slides", date: "27–28 Oct 2026", what: "Competitor walkthrough and their partner-portal slides (application, home, journeys, leads, assets, training, analytics)", use: "Competitor reference for the partner portals" },
   { id: "TechDesign", rank: 1, title: "Technical Design", date: "Jen · 30 Sep 2026", what: "Cited by the deck and the Brief but not in any folder we have", use: "Marked \"cited, not seen\"" },
 ]
@@ -76,7 +76,7 @@ export const glossary: Item[] = [
   status: "specified" as const, sources: [{ doc: "BRD" as const }, { doc: "Deck" as const }], tags: ["what is", "meaning", "define"],
 }))
 
-/** The four portals built in the prototype, kept here so the hub tracks what's been designed. */
+/** The six portals built in the prototype, kept here so the hub tracks what's been designed. */
 export const portals: { persona: string; role: string; person: string; org: string; stage: string; screens: string[]; added: string[] }[] = [
   { persona: "pam", role: "Partner manager", person: "Jordan Lee", org: "Brightline", stage: "1A",
     screens: ["Home", "Review queue (decide, extensions, waiting on partner)", "Deals & leads", "Partners, applications and onboarding", "Credit splits", "Salesforce sync", "Partner health (Stage 2)", "Three journeys"],
@@ -88,6 +88,12 @@ export const portals: { persona: string; role: string; person: string; org: stri
     screens: ["Home (verified revenue, tier progress)", "Deals (every Ridgeway deal)", "Leads (accept and assign)", "Revenue and credit", "Program, benefits and agreements", "Team", "Resources", "Three journeys", "Your access"],
     added: ["AI suggests which rep should own a lead (G33)"] },
   { persona: "rep", role: "Partner sales rep", person: "Marcus Bell", org: "Ridgeway IT", stage: "1A",
-    screens: ["Home", "Register a deal (three taps)", "My deals", "Leads sent to him", "My credit", "Resources", "Three journeys", "Your access"],
+    screens: ["Home", "Register a deal (three taps)", "My deals", "Leads sent to him, and leads from Ridgeway's own campaigns", "My credit", "Resources", "Three journeys", "Your access"],
     added: [] },
+  { persona: "mkt", role: "Partner marketer", person: "Priya Raman", org: "Ridgeway IT", stage: "2",
+    screens: ["Home (pipeline from her campaigns)", "Campaigns and campaign results", "Launch a campaign (kit, co-brand, tracked link)", "Campaign leads (hand to a rep)", "Funds (MDF requests and claims)", "Resources", "Three journeys", "Your access"],
+    added: ["AI suggests which rep gets each campaign lead (G39)", "The Program agent checks her intro for unapproved claims"] },
+  { persona: "tech", role: "Partner technical lead", person: "Raj Mehta", org: "Northpeak Consulting", stage: "2",
+    screens: ["Home (influenced revenue)", "Deals he works on, with joint plans", "Log a milestone", "Skills ladder and company capability", "Influence and credit", "Resources", "Three journeys", "Your access"],
+    added: ["Milestones logged only once a deal has an opportunity (G40)"] },
 ]

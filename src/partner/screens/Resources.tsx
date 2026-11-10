@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { BookOpen, FileText, GraduationCap, Image, PlayCircle, Search, Sheet, Stamp } from "lucide-react"
+import { ArrowRight, BookOpen, FileText, GraduationCap, Image, Images, PlayCircle, Search, Sheet, Stamp } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader, PageTabs, Panel } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
@@ -12,10 +12,17 @@ import { assets, courses, type Asset } from "@/partner/data"
 import { usePartner } from "@/partner/usePartner"
 import { StageTag } from "@/partner/bits"
 
-const kindIcon: Record<Asset["kind"], typeof FileText> = { PDF: FileText, Deck: Image, Video: PlayCircle, Sheet: Sheet }
+const kindIcon: Record<Asset["kind"], typeof FileText> = { PDF: FileText, Deck: Image, Video: PlayCircle, Sheet: Sheet, Images: Images }
+
+const header = {
+  pexec: { sub: "Program material for your leadership, plus everything your reps use.", assets: "Sales and program assets" },
+  rep: { sub: "Sales material, pricing and training, chosen for sales reps.", assets: "Sales and program assets" },
+  mkt: { sub: "Campaign assets, brand rules and the funds guide. Pricing is for sales roles only.", assets: "Marketing assets" },
+  tech: { sub: "Implementation guides, reference architectures and API docs for delivery.", assets: "Technical resources" },
+}
 
 export function Resources({ tab }: { tab?: string }) {
-  const { me, isExec } = usePartner()
+  const { me, company, isExec, isTech } = usePartner()
   const { state } = useStore()
   const t = tab === "training" ? "training" : "assets"
   const [q, setQ] = useState("")
@@ -23,13 +30,13 @@ export function Resources({ tab }: { tab?: string }) {
   const mine = assets.filter((a) => a.audience.includes(me.role)).filter((a) => !q.trim() || `${a.title} ${a.category}`.toLowerCase().includes(q.trim().toLowerCase()))
   return (
     <div>
-      <PageHeader title="Resources" sub={isExec ? "Program material for Ridgeway's leadership, plus everything your reps use." : "Sales material, pricing and training, chosen for sales reps."} />
+      <PageHeader title="Resources" sub={header[me.role].sub} />
       <PageTabs
         label="Resource views"
         value={t}
         onChange={(v) => go(`/p/resources/${v}`)}
         items={[
-          { value: "assets", label: "Sales and program assets", icon: <BookOpen />, count: assets.filter((a) => a.audience.includes(me.role)).length },
+          { value: "assets", label: header[me.role].assets, icon: <BookOpen />, count: assets.filter((a) => a.audience.includes(me.role)).length },
           { value: "training", label: "Training", icon: <GraduationCap /> },
         ]}
       />
@@ -58,18 +65,22 @@ export function Resources({ tab }: { tab?: string }) {
                   </div>
                   <div className="mt-auto flex gap-2 pt-4">
                     <Button variant="outline" className="flex-1" onClick={() => toast(`Opening ${a.title}`, { description: "Brightline sees which assets partners use, never who you send them to." })}>Open</Button>
-                    {a.cobrand && <Button variant="outline" className="flex-1" onClick={() => toast.success("Co-branded copy ready", { description: "Ridgeway's logo is in the approved area. Brightline's logo stays as is." })}><Stamp /> Add our logo</Button>}
+                    {a.cobrand && <Button variant="outline" className="flex-1" onClick={() => toast.success("Co-branded copy ready", { description: `${company.short}'s logo is in the approved area. Brightline's logo stays as is.` })}><Stamp /> Add our logo</Button>}
                   </div>
                 </li>
               )
             })}
           </ul>
         </>
+      ) : isTech ? (
+        <Panel title="Your certifications live in Skills" sub="The skills ladder shows your courses, exams and what moves you to Sell-Ready and Proven.">
+          <Button onClick={() => go("/p/skills")}>Open Skills <ArrowRight /></Button>
+        </Panel>
       ) : (
         <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
           <Panel title={<span className="flex flex-wrap items-center gap-3">{isExec ? "Courses for your team" : "Your courses"} <StageTag>Certifications · Stage 2</StageTag></span>} sub="Learned → Certified → Sell-ready → Proven. Proven is automatic when you close a deal in that product.">
             <ul className="space-y-4">
-              {courses.map((c) => (
+              {courses.filter((c) => (c.audience ?? ["rep", "pexec"]).includes(me.role)).map((c) => (
                 <li key={c.id} className="rounded-[12px] border p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <span className="min-w-0"><b className="block text-[16px] text-foreground">{c.title}</b><span className="text-[14px] text-muted-foreground">{c.detail}</span></span>

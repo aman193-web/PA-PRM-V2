@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react"
 import type { Lead, PartnerRole, Registration } from "@/data/model"
 import { hoursLeft, NOW, shortDate } from "@/lib/format"
 import { useStore, type State } from "@/store"
-import { company, people, repProfiles, type PartnerPerson, type PartnerRoleId } from "@/partner/data"
+import { companies, people, repProfiles, type PartnerPerson, type PartnerRoleId } from "@/partner/data"
 
 const Ctx = createContext<PartnerPerson | null>(null)
 
@@ -13,7 +13,7 @@ export function PartnerProvider({ role, children }: { role: PartnerRoleId; child
 export function usePartner() {
   const me = useContext(Ctx)
   if (!me) throw new Error("usePartner outside PartnerProvider")
-  return { me, isExec: me.role === "pexec" }
+  return { me, company: companies[me.companyId], isExec: me.role === "pexec", isRep: me.role === "rep", isMkt: me.role === "mkt", isTech: me.role === "tech" }
 }
 
 export const daysUntil = (iso: string) => Math.ceil((new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).getTime() - NOW.getTime()) / 86_400_000)
@@ -40,16 +40,17 @@ export interface CreditItem {
 }
 
 /**
- * Everything the signed-in partner person may see, already filtered by role:
- * the executive sees all of Ridgeway's data, the rep only their own deals and leads (R-SEC-2).
+ * The deals, leads and credit the signed-in partner person may see, already filtered by role:
+ * the executive sees all of the company's data, the rep only their own deals and leads (R-SEC-2).
+ * The marketer and technical lead see none of this; their own views come from useMarketing and useDelivery.
  */
 export function usePartnerData() {
   const { state } = useStore()
-  const { me, isExec } = usePartner()
+  const { me, company, isExec, isRep } = usePartner()
   return useMemo(() => {
     const all = state.registrations.filter((r) => r.partnerId === company.id)
-    const deals = (isExec ? all : all.filter((r) => r.rep === me.name)).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-    const leads = state.leads.filter((l) => l.partnerId === company.id && (isExec || l.assignee === me.name))
+    const deals = (isExec ? all : isRep ? all.filter((r) => r.rep === me.name) : []).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+    const leads = state.leads.filter((l) => l.partnerId === company.id && (isExec || (isRep && l.assignee === me.name)))
     const pendingExt = (r: Registration) => state.extensions.some((e) => e.registrationId === r.id && e.status === "pending")
 
     const needsReply = deals.filter((r) => r.state === "info_requested")
@@ -100,13 +101,14 @@ export function usePartnerData() {
     const weekValue = thisWeek.reduce((n, c) => n + c.credited, 0)
 
     return { all, deals, leads, needsReply, inReview, expiring, offers, credit, verifiedTotal, pipelineTotal, weekValue, thisWeek, pendingExt }
-  }, [state, me, isExec])
+  }, [state, me, company, isExec, isRep])
 }
 
+/** Recent activity for this person: their own items, or everything at their company for its admin. */
 export function usePartnerFeed() {
   const { state } = useStore()
-  const { me, isExec } = usePartner()
-  return state.partnerFeed.filter((f) => isExec || f.rep === me.name)
+  const { me, company, isExec } = usePartner()
+  return state.partnerFeed.filter((f) => (f.companyId ?? "ridgeway") === company.id && (isExec || f.rep === me.name))
 }
 
 /* ---------- partner-facing wording for deal status (R-STATE-1) ---------- */

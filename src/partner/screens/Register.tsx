@@ -62,22 +62,25 @@ export function Register({ leadId }: { leadId?: string }) {
   const { state, dispatch } = useStore()
   const { me, isExec } = usePartner()
   const lead = state.leads.find((l) => l.id === leadId && l.partnerId === company.id)
+  // Or a lead from Ridgeway's own campaign, handed to this rep by the marketer.
+  const cl = lead ? undefined : state.campaignLeads.find((l) => l.id === leadId && l.companyId === company.id)
+  const src = lead ?? cl
   const [mode, setMode] = useState<"chat" | "email">("chat")
   const [text, setText] = useState("")
-  // A lead from Brightline already carries the customer and contact, so it starts at the check step.
-  const [step, setStep] = useState<"describe" | "reading" | "check" | "deciding" | "done">(lead ? "check" : "describe")
+  // A lead already carries the customer and contact, so it starts at the check step.
+  const [step, setStep] = useState<"describe" | "reading" | "check" | "deciding" | "done">(src ? "check" : "describe")
   const [fields, setFields] = useState<Fields | null>(() =>
-    lead
+    src
       ? {
-          account: f(lead.company, 0.99),
-          contact: f(`${lead.contact}, ${lead.title}`, 0.99),
-          product: f(lead.product === "Platform" ? "Platform · Standard" : "Analytics · Standard", 0.7),
-          value: f(String(lead.estValue), 0.75),
+          account: f(src.company, 0.99),
+          contact: f(`${src.contact}, ${src.title}`, 0.99),
+          product: f(src.product === "Platform" ? "Platform · Standard" : "Analytics · Standard", 0.7),
+          value: f(String(src.estValue), 0.75),
           close: f(addDays(NOW.toISOString().slice(0, 10), 75), 0.5),
         }
       : null,
   )
-  const [rep, setRep] = useState(lead?.assignee ?? me.name)
+  const [rep, setRep] = useState(src?.assignee ?? me.name)
   const [newId, setNewId] = useState<string | null>(null)
 
   const canRegister = state.team.filter((m) => m.canRegister && m.status === "active")
@@ -122,7 +125,7 @@ export function Register({ leadId }: { leadId?: string }) {
     const reasons: ReviewReason[] = [...(conflict ? [conflict] : []), ...(value > LIMIT ? (["over_limit"] as const) : [])]
     const seconds = 32 + Math.floor(Math.random() * 14)
     const at = NOW.toISOString()
-    const source = lead ? "Brightline lead" : mode === "email" ? "Forwarded email" : "Chat with PartnerAssistant"
+    const source = lead ? "Brightline lead" : cl ? "Ridgeway campaign lead" : mode === "email" ? "Forwarded email" : "Chat with PartnerAssistant"
     const ai: AiAdvice | undefined = willAuto ? undefined : conflict
       ? { action: "request_info", headline: "Ask Ridgeway who they've met and when", confidence: 0.7, infoNeeded: ["First meeting date", "Who they've spoken to"], evidence: ["The customer matches an existing record.", "Ridgeway's partner quality is 0.86."] }
       : { action: "approve", headline: "Approve: clean deal, only held back by size", confidence: 0.9, evidence: ["No conflicts in Salesforce or other partners' registrations.", "Every field was confirmed by the partner.", "Ridgeway has won 4 deals with Brightline this year."] }
@@ -131,13 +134,14 @@ export function Register({ leadId }: { leadId?: string }) {
       submittedAt: at, program: "Reseller", state: willAuto ? "approved" : "under_review", slaHours: reviewHoursFor(state.programRules[company.program as ProgramId], value), usedHours: 0, reasons,
       checks, conflict: undefined, ai,
       prefill: (Object.keys(fields) as (keyof Fields)[]).map((k) => ({ label: labels[k], value: k === "value" ? money(value) : k === "close" ? date(fields.close.value) : fields[k].value, confidence: fields[k].confidence, source })),
-      note: lead ? `From Brightline lead ${lead.id}. ${lead.update ?? ""}` : text.trim(),
+      note: lead ? `From Brightline lead ${lead.id}. ${lead.update ?? ""}` : cl ? `From Ridgeway's own campaign (${state.campaigns.find((c) => c.id === cl.campaignId)?.name ?? cl.campaignId}). ${cl.activity}.` : text.trim(),
+      ...(cl ? { campaignId: cl.campaignId } : {}),
       ...(willAuto
         ? { decision: { by: "rules" as const, action: "approved" as const, at, seconds }, crm: { opportunityId: `006Q80000${num}New`, role: "Reseller", sync: "pending" as const, linked: "new" as const }, protectedUntil: addDays(at.slice(0, 10), 90), crmStage: "Discovery" }
         : {}),
     }
     setTimeout(() => {
-      dispatch({ type: "partnerRegister", reg, leadId: lead?.id, by: me.name })
+      dispatch({ type: "partnerRegister", reg, leadId: src?.id, by: me.name })
       setNewId(id)
       setStep("done")
     }, 1600)
@@ -198,7 +202,7 @@ export function Register({ leadId }: { leadId?: string }) {
 
       {(step === "check" || step === "deciding") && fields && (
         <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-          <Panel title="Check the details" sub={toConfirm.length ? `${toConfirm.length} field${toConfirm.length > 1 ? "s" : ""} to confirm. Tap Confirm or edit them.` : "Everything is confirmed."} action={lead ? <Badge variant="secondary">From Brightline lead</Badge> : <Badge className="border-0 bg-brand-soft text-primary"><Sparkles className="size-3.5" /> Filled by AI</Badge>}>
+          <Panel title="Check the details" sub={toConfirm.length ? `${toConfirm.length} field${toConfirm.length > 1 ? "s" : ""} to confirm. Tap Confirm or edit them.` : "Everything is confirmed."} action={lead ? <Badge variant="secondary">From Brightline lead</Badge> : cl ? <Badge variant="secondary">From Ridgeway's campaign</Badge> : <Badge className="border-0 bg-brand-soft text-primary"><Sparkles className="size-3.5" /> Filled by AI</Badge>}>
             <div className="grid gap-4">
               {(Object.keys(fields) as (keyof Fields)[]).map((k) => {
                 const fl = fields[k]

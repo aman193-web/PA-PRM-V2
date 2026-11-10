@@ -1,10 +1,23 @@
-// Partner-side demo data: Ridgeway IT's two people, its team, program terms and resources.
-// Access lists mirror the PRM Knowledge Hub's permission matrix for these two roles.
+// Partner-side demo data: the four partner personas, their companies, Ridgeway's team, program terms and resources.
+// Access lists mirror the PRM Knowledge Hub's permission matrix for each role.
 
-export type PartnerRoleId = "pexec" | "rep"
+export type PartnerRoleId = "pexec" | "rep" | "mkt" | "tech"
+
+export interface PartnerCompany {
+  id: string
+  name: string
+  short: string
+  tier: string
+  program: string
+  vendor: string
+  region: string
+  /** The company's own admin, who invites its people. */
+  admin: string
+}
 
 export interface PartnerPerson {
   role: PartnerRoleId
+  companyId: string
   name: string
   first: string
   initials: string
@@ -13,11 +26,21 @@ export interface PartnerPerson {
   roleLabel: string
 }
 
-export const company = { id: "ridgeway", name: "Ridgeway IT", tier: "Gold", program: "Reseller", vendor: "Brightline", region: "North America · Central" }
+// Three personas work at Ridgeway IT (a Gold reseller). The technical lead works at Northpeak Consulting,
+// a Platinum services partner, as in the persona document: services partners deliver the implementations.
+export const companies: Record<string, PartnerCompany> = {
+  ridgeway: { id: "ridgeway", name: "Ridgeway IT", short: "Ridgeway", tier: "Gold", program: "Reseller", vendor: "Brightline", region: "North America · Central", admin: "Paul Okafor" },
+  northpeak: { id: "northpeak", name: "Northpeak Consulting", short: "Northpeak", tier: "Platinum", program: "Services", vendor: "Brightline", region: "North America · East", admin: "Hannah Cho" },
+}
+
+/** Ridgeway IT: the company the executive, sales rep and marketer work for. */
+export const company = companies.ridgeway
 
 export const people: Record<PartnerRoleId, PartnerPerson> = {
-  pexec: { role: "pexec", name: "Paul Okafor", first: "Paul", initials: "PO", title: "CEO", email: "paul@ridgewayit.com", roleLabel: "Partner executive" },
-  rep: { role: "rep", name: "Marcus Bell", first: "Marcus", initials: "MB", title: "Partner sales lead", email: "marcus@ridgewayit.com", roleLabel: "Partner sales rep" },
+  pexec: { role: "pexec", companyId: "ridgeway", name: "Paul Okafor", first: "Paul", initials: "PO", title: "CEO", email: "paul@ridgewayit.com", roleLabel: "Partner executive" },
+  rep: { role: "rep", companyId: "ridgeway", name: "Marcus Bell", first: "Marcus", initials: "MB", title: "Partner sales lead", email: "marcus@ridgewayit.com", roleLabel: "Partner sales rep" },
+  mkt: { role: "mkt", companyId: "ridgeway", name: "Priya Raman", first: "Priya", initials: "PR", title: "Marketing manager", email: "priya@ridgewayit.com", roleLabel: "Partner marketer" },
+  tech: { role: "tech", companyId: "northpeak", name: "Raj Mehta", first: "Raj", initials: "RM", title: "Solutions architect", email: "raj.mehta@northpeak.co", roleLabel: "Partner technical lead" },
 }
 
 export const partnerManager = { name: "Jordan Lee", title: "Your partner manager at Brightline", email: "jordan.lee@brightline.io", phone: "+1 312 555 0199", initials: "JL" }
@@ -97,14 +120,12 @@ export const agreementsSeed: Agreement[] = [
   { id: "ag5", name: "Certificate of insurance", status: "expiring", detail: "Expires Nov 30, 2026 · upload the renewed certificate" },
 ]
 
-export const mdf = { available: 7500, yearly: 10000, used: 2500 }
-
 /* ---------- Resources and training (segmented by role, as in Impartner's asset library) ---------- */
 
 export interface Asset {
   id: string
   title: string
-  kind: "PDF" | "Deck" | "Video" | "Sheet"
+  kind: "PDF" | "Deck" | "Video" | "Sheet" | "Images"
   category: string
   audience: PartnerRoleId[]
   cobrand?: boolean
@@ -112,15 +133,26 @@ export interface Asset {
   note?: string
 }
 
+// Segmented by role, as in Impartner's asset library: pricing for sales roles only, campaign material for the
+// marketer, technical material for the technical lead.
 export const assets: Asset[] = [
   { id: "as1", title: "Analytics battlecard", kind: "PDF", category: "Selling", audience: ["rep", "pexec"], updated: "2026-10-20" },
   { id: "as2", title: "2026 price list and discount guide", kind: "Sheet", category: "Pricing", audience: ["rep", "pexec"], updated: "2026-10-01", note: "Sales roles only" },
-  { id: "as3", title: "Analytics one-pager", kind: "PDF", category: "Marketing", audience: ["rep", "pexec"], cobrand: true, updated: "2026-09-12" },
-  { id: "as4", title: "Hospitality customer story: Lakeshore Hotels", kind: "PDF", category: "Customer stories", audience: ["rep", "pexec"], cobrand: true, updated: "2026-10-22" },
-  { id: "as5", title: "Platform demo script (15 minutes)", kind: "Video", category: "Selling", audience: ["rep"], updated: "2026-08-30" },
+  { id: "as3", title: "Analytics one-pager", kind: "PDF", category: "Marketing", audience: ["rep", "pexec", "mkt"], cobrand: true, updated: "2026-09-12" },
+  { id: "as4", title: "Hospitality customer story: Lakeshore Hotels", kind: "PDF", category: "Customer stories", audience: ["rep", "pexec", "mkt"], cobrand: true, updated: "2026-10-22" },
+  { id: "as5", title: "Platform demo script (15 minutes)", kind: "Video", category: "Selling", audience: ["rep", "tech"], updated: "2026-08-30" },
   { id: "as6", title: "Partner program guide 2026", kind: "PDF", category: "Program", audience: ["pexec"], updated: "2026-01-15" },
   { id: "as7", title: "Joint business plan template", kind: "Deck", category: "Program", audience: ["pexec"], updated: "2026-02-04" },
   { id: "as8", title: "Quarterly business review deck", kind: "Deck", category: "Program", audience: ["pexec"], updated: "2026-10-03" },
+  { id: "as9", title: "Brightline brand and co-branding guide", kind: "PDF", category: "Brand", audience: ["mkt", "pexec"], updated: "2026-07-01", note: "Where your logo may go" },
+  { id: "as10", title: "Hospitality campaign images (12)", kind: "Images", category: "Campaigns", audience: ["mkt"], cobrand: true, updated: "2026-10-02" },
+  { id: "as11", title: "Healthcare data webinar slides", kind: "Deck", category: "Campaigns", audience: ["mkt"], cobrand: true, updated: "2026-10-14" },
+  { id: "as12", title: "MDF guide: what qualifies and how to claim", kind: "PDF", category: "Funds", audience: ["mkt", "pexec"], updated: "2026-01-15" },
+  { id: "as13", title: "Platform implementation guide", kind: "PDF", category: "Implementation", audience: ["tech"], updated: "2026-09-20" },
+  { id: "as14", title: "Reference architecture: Grid analytics", kind: "PDF", category: "Architecture", audience: ["tech"], updated: "2026-10-12" },
+  { id: "as15", title: "Integration API and data connectors", kind: "PDF", category: "Implementation", audience: ["tech"], updated: "2026-10-05" },
+  { id: "as16", title: "Analytics go-live checklist", kind: "Sheet", category: "Delivery", audience: ["tech"], updated: "2026-08-18" },
+  { id: "as17", title: "Grid analytics deep dive (45 minutes)", kind: "Video", category: "Training", audience: ["tech"], updated: "2026-10-09" },
 ]
 
 export interface Course {
@@ -129,6 +161,8 @@ export interface Course {
   detail: string
   progress: number
   certifies?: string
+  /** Who the course is for; sales courses by default. */
+  audience?: PartnerRoleId[]
 }
 
 export const courses: Course[] = [
@@ -136,6 +170,8 @@ export const courses: Course[] = [
   { id: "c2", title: "Platform sales certification", detail: "Needed for Platinum: 2 more certified reps", progress: 42, certifies: "Platform sales" },
   { id: "c3", title: "Registering deals in 3 taps", detail: "5-minute course", progress: 100 },
   { id: "c4", title: "Technical lead certification", detail: "For sales engineers · needed for Platinum", progress: 0, certifies: "Technical lead" },
+  { id: "c5", title: "Co-marketing with Brightline", detail: "Content kits, approved claims and co-branding · 20 minutes", progress: 100, audience: ["mkt"] },
+  { id: "c6", title: "Tracked links, leads and MDF claims", detail: "How campaign results reach your claim · 15 minutes", progress: 40, audience: ["mkt"] },
 ]
 
 /* ---------- Access: what each role can and can't do (from the hub's matrix) ---------- */
@@ -178,6 +214,40 @@ export const access: Record<PartnerRoleId, { can: AccessLine[]; cannot: AccessLi
       { text: "See another partner's deals, credit or commercials", ref: "R-CR-5" },
       { text: "Change credit splits", ref: "R-CR-2" },
       { text: "Manage users, program terms, agreements or funds", ref: "BRD persona" },
+    ],
+  },
+  mkt: {
+    can: [
+      { text: "Pick a Brightline content kit and launch a campaign with your own tracked link", stage: "Stage 2", ref: "Personas" },
+      { text: "Add Ridgeway's logo in the approved area and publish Brightline-approved claims, with the partnership disclosed", stage: "Stage 2", ref: "Publish content" },
+      { text: "See your own campaigns' results: clicks, leads and the pipeline they produced", stage: "Stage 2", ref: "Own campaigns" },
+      { text: "Hand leads from your campaigns to a Ridgeway sales rep", stage: "Stage 2", ref: "Personas" },
+      { text: "Request market development funds (MDF) and file claims with proof", stage: "Stage 2", ref: "R-APR-4" },
+      { text: "Use marketing assets and marketing courses", stage: "1B" },
+    ],
+    cannot: [
+      { text: "Edit Brightline's claims or publish content Brightline hasn't approved", ref: "Publish content" },
+      { text: "Approve funds; Brightline's channel chief approves every request and claim", ref: "R-APR-4" },
+      { text: "See Ridgeway's deals, credit or pricing; you see only the pipeline your campaigns produced", ref: "R-SEC-2" },
+      { text: "Register deals; the rep you hand a lead to registers it", ref: "BRD persona" },
+      { text: "See another partner's campaigns, deals or credit", ref: "R-CR-5" },
+    ],
+  },
+  tech: {
+    can: [
+      { text: "See the Northpeak deals you work on, with their joint plans", stage: "Stage 2", ref: "Own deals" },
+      { text: "Log delivery milestones; each one is recorded as a touch on the Salesforce opportunity", stage: "Stage 2", ref: "Log delivery" },
+      { text: "Pick up joint-plan tasks and mark them done", stage: "Stage 2", ref: "J-03" },
+      { text: "Climb the skills ladder: Learned, Certified, Sell-Ready, Proven", stage: "Stage 2", ref: "R-GR-3" },
+      { text: "See influenced revenue and Northpeak's credit on deals you worked", stage: "1B", ref: "R-CR-5" },
+      { text: "Use technical resources: implementation guides, reference architectures and API docs", stage: "1B" },
+    ],
+    cannot: [
+      { text: "Edit or delete a logged milestone; touches are permanent evidence", ref: "Touch" },
+      { text: "Register deals or answer review questions; Hannah Cho and Northpeak's sellers do", ref: "BRD persona" },
+      { text: "Change credit splits; disputes go to your partner manager", ref: "R-CR-2" },
+      { text: "See another partner's share or commercials, even on a shared deal", ref: "R-CR-5" },
+      { text: "See Northpeak deals you don't work on, or manage users and agreements", ref: "R-SEC-2" },
     ],
   },
 }

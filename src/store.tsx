@@ -8,9 +8,11 @@ import { roleWeights } from "@/data/model"
 import { NOW, addDays, money } from "@/lib/format"
 import { agreementsSeed, teamSeed, type Agreement as PartnerAgreement, type TeamMember } from "@/partner/data"
 import { agents as agentSeed, requestsSeed, rulesSeed, type ChangeRequest, type ProgramId, type RuleSet } from "@/chief/data"
+import { campaignLeadsSeed, campaignsSeed, mdfSeed, type Campaign, type CampaignLead, type MdfRequest } from "@/partner/marketing"
+import { engagementsSeed, skillsSeed, type Engagement, type Skill } from "@/partner/delivery"
 
-/** Something that happened on the partner side. `rep` limits it to that rep (and the partner's admin). */
-export interface PartnerFeedItem { id: string; at: string; text: string; href?: string; rep?: string }
+/** Something that happened on the partner side. `rep` limits it to that person (and their company's admin). Ridgeway unless `companyId` says otherwise. */
+export interface PartnerFeedItem { id: string; at: string; text: string; href?: string; rep?: string; companyId?: string }
 export interface Dispute { id: string; regId: string; by: string; reason: string; at: string }
 /** A partner moved between partner managers by the channel chief. Standard practice, not in the documents. */
 export interface Assignment { id: string; partnerId: string; partner: string; from: string; to: string; reason: string; at: string }
@@ -40,6 +42,13 @@ export interface State {
   assignments: Assignment[]
   programRules: Record<ProgramId, RuleSet>
   pausedAgents: string[]
+  /* Partner marketer (Stage 2) */
+  campaigns: Campaign[]
+  campaignLeads: CampaignLead[]
+  mdf: MdfRequest[]
+  /* Partner technical lead (Stage 2) */
+  engagements: Engagement[]
+  skills: Skill[]
 }
 
 const initial: State = {
@@ -69,11 +78,22 @@ const initial: State = {
     { id: "pf4", at: "2026-10-27T17:30:00", text: "Jordan Lee sent Marcus a lead: Lakeside Logistics", href: "/p/leads", rep: "Marcus Bell" },
     { id: "pf5", at: "2026-10-27T09:30:00", text: "Jordan Lee asked a question about Solace Retail", href: "/p/deal/REG-2027", rep: "Marcus Bell" },
     { id: "pf6", at: "2026-10-10T09:00:36", text: "Rules approved Copperline Mining in 36 seconds", href: "/p/deal/REG-1960", rep: "Jenna Ruiz" },
+    { id: "pf7", at: "2026-10-28T08:45:00", text: "Cobalt Resorts came in from your Q4 hospitality emails", href: "/p/leads", rep: "Priya Raman" },
+    { id: "pf8", at: "2026-10-27T15:10:00", text: "Your $4,000 funds request for the manufacturing launch is with Brightline", href: "/p/funds", rep: "Priya Raman" },
+    { id: "pf9", at: "2026-10-20T14:00:00", text: "You handed Lakeview Suites to Jenna Ruiz", href: "/p/leads", rep: "Priya Raman" },
+    { id: "pf10", at: "2026-10-27T10:21:00", text: "Kestrel Energy is with Jordan Lee for review. You're named for the solution design", href: "/p/work/ENG-4", rep: "Raj Mehta", companyId: "northpeak" },
+    { id: "pf11", at: "2026-10-24T16:30:00", text: "Your statement of work on Harborview Logistics was recorded as a touch", href: "/p/work/ENG-1", rep: "Raj Mehta", companyId: "northpeak" },
+    { id: "pf12", at: "2026-10-22T17:00:00", text: "You finished the Grid analytics course. The exam is next", href: "/p/skills", rep: "Raj Mehta", companyId: "northpeak" },
   ],
   requests: requestsSeed,
   assignments: [],
   programRules: rulesSeed,
   pausedAgents: [],
+  campaigns: campaignsSeed,
+  campaignLeads: campaignLeadsSeed,
+  mdf: mdfSeed,
+  engagements: engagementsSeed,
+  skills: skillsSeed,
   agentLevels: Object.fromEntries(agentSeed.map((a) => [a.id, a.level])),
   chiefFeed: [
     { id: "cf1", at: "2026-10-28T10:20:00", text: "Kestrel Energy passed 80% of its review deadline with Jordan Lee", href: "/c/approval/reg-REG-2038" },
@@ -122,6 +142,17 @@ type Action =
   | { type: "chiefRequest"; id: string; approve: boolean; note?: string }
   | { type: "chiefAssign"; partnerId: string; to: string; reason: string }
   | { type: "toggleAgent"; id: string }
+  // partner marketer
+  | { type: "launchCampaign"; campaign: Campaign }
+  | { type: "handOffLead"; id: string; rep: string; by: string }
+  | { type: "returnLead"; id: string; reason: string; by: string }
+  | { type: "requestMdf"; req: MdfRequest }
+  | { type: "claimMdf"; id: string; amount: number; proof: string[]; results: string }
+  // channel chief decides funds (money always needs a human, R-APR-4)
+  | { type: "chiefMdf"; id: string; approve: boolean; reason?: string }
+  // partner technical lead
+  | { type: "logMilestone"; engagementId: string; kind: string; text: string; taskId?: string; by: string }
+  | { type: "passExam"; skillId: string }
 
 const stamp = () => NOW.toISOString()
 const log = (s: State, text: string, href?: string): ActivityItem[] => [
@@ -129,8 +160,8 @@ const log = (s: State, text: string, href?: string): ActivityItem[] => [
   ...s.activity,
 ]
 const partnerName = (s: State, id: string) => s.partners.find((p) => p.id === id)?.name ?? id
-const feed = (s: State, text: string, href?: string, rep?: string): PartnerFeedItem[] => [
-  { id: `pf${Date.now()}${Math.random()}`, at: stamp(), text, href, rep },
+const feed = (s: State, text: string, href?: string, rep?: string, companyId?: string): PartnerFeedItem[] => [
+  { id: `pf${Date.now()}${Math.random()}`, at: stamp(), text, href, rep, companyId },
   ...s.partnerFeed,
 ]
 const notice = (s: State, title: string, body: string, href: string, tone: Notice["tone"] = "info"): Notice[] => [
@@ -311,7 +342,11 @@ function reducer(s: State, a: Action): State {
         ...s,
         registrations: [r, ...s.registrations],
         leads: a.leadId ? s.leads.map((l) => (l.id === a.leadId ? { ...l, status: "converted", registrationId: r.id } : l)) : s.leads,
-        partnerFeed: feed(s, auto ? `Rules approved ${r.customer} in ${r.decision!.seconds} seconds` : `${r.customer} is with Jordan Lee for review`, `/p/deal/${r.id}`, r.rep),
+        campaignLeads: a.leadId ? s.campaignLeads.map((l) => (l.id === a.leadId ? { ...l, status: "converted", registrationId: r.id } : l)) : s.campaignLeads,
+        partnerFeed: [
+          ...(r.campaignId ? feed(s, `${r.rep} registered ${r.customer} from your campaign: ${money(r.value)} of pipeline`, "/p/campaigns", s.campaigns.find((c) => c.id === r.campaignId)?.owner).slice(0, 1) : []),
+          ...feed(s, auto ? `Rules approved ${r.customer} in ${r.decision!.seconds} seconds` : `${r.customer} is with Jordan Lee for review`, `/p/deal/${r.id}`, r.rep),
+        ],
         notices: auto ? s.notices : notice(s, "New registration needs you", `${partnerName(s, r.partnerId)} · ${r.customer} · ${money(r.value)}`, `/registration/${r.id}`),
         activity: log(s, auto ? `Rules approved ${r.customer} for ${partnerName(s, r.partnerId)} in ${r.decision!.seconds} seconds` : `${a.by} registered ${r.customer}; it needs your review`, `/registration/${r.id}`),
       }
@@ -470,6 +505,117 @@ function reducer(s: State, a: Action): State {
         chiefFeed: chiefLog(s, `You ${a.approve ? "approved" : "declined"}: ${r.title}`, "/c/program"),
       }
     }
+    /* ---------- partner marketer ---------- */
+    case "launchCampaign": {
+      const c = a.campaign
+      return {
+        ...s,
+        campaigns: [c, ...s.campaigns.filter((x) => x.id !== c.id)],
+        partnerFeed: feed(s, c.status === "live" ? `${c.name} is live with your tracked link` : `${c.name} is scheduled for ${c.start}`, `/p/campaign/${c.id}`, c.owner),
+      }
+    }
+    case "handOffLead": {
+      const l = s.campaignLeads.find((x) => x.id === a.id)!
+      const handed = { id: `pf${Date.now()}h`, at: stamp(), text: `${a.by} handed you a lead from her campaign: ${l.company}`, href: "/p/leads", rep: a.rep }
+      return {
+        ...s,
+        campaignLeads: s.campaignLeads.map((x) => (x.id === a.id ? { ...x, status: "with_rep", assignee: a.rep, handedAt: stamp(), returnReason: undefined } : x)),
+        partnerFeed: [handed, ...feed(s, `You handed ${l.company} to ${a.rep}`, "/p/leads", a.by)],
+      }
+    }
+    case "returnLead": {
+      const l = s.campaignLeads.find((x) => x.id === a.id)!
+      const owner = s.campaigns.find((c) => c.id === l.campaignId)?.owner
+      return {
+        ...s,
+        campaignLeads: s.campaignLeads.map((x) => (x.id === a.id ? { ...x, status: "returned", returnReason: a.reason } : x)),
+        partnerFeed: feed(s, `${a.by} handed ${l.company} back: ${a.reason}`, "/p/leads", owner),
+      }
+    }
+    case "requestMdf": {
+      const r = a.req
+      return {
+        ...s,
+        mdf: [r, ...s.mdf],
+        campaigns: r.campaignId ? s.campaigns.map((c) => (c.id === r.campaignId ? { ...c, mdfId: r.id } : c)) : s.campaigns,
+        partnerFeed: feed(s, `Your ${money(r.amount)} funds request for ${r.campaign} is with Brightline`, "/p/funds", r.requestedBy),
+        chiefFeed: chiefLog(s, `${r.requestedBy} (${partnerName(s, r.companyId)}) asked for ${money(r.amount)} of marketing funds`, `/c/approval/mdf-${r.id}`),
+        notices: notice(s, `${partnerName(s, r.companyId)} asked for marketing funds`, `${money(r.amount)} for ${r.campaign} · Dana Ortiz decides`, `/partner/${r.companyId}`),
+        activity: log(s, `${r.requestedBy} (${partnerName(s, r.companyId)}) asked Dana Ortiz for ${money(r.amount)} of marketing funds`, `/partner/${r.companyId}`),
+      }
+    }
+    case "claimMdf": {
+      const r = s.mdf.find((x) => x.id === a.id)!
+      return {
+        ...s,
+        mdf: s.mdf.map((x) => (x.id === a.id ? { ...x, status: "claimed", claim: { amount: a.amount, at: stamp(), proof: a.proof, results: a.results } } : x)),
+        partnerFeed: feed(s, `Your ${money(a.amount)} claim for ${r.campaign} is with Brightline`, "/p/funds", r.requestedBy),
+        chiefFeed: chiefLog(s, `${r.requestedBy} (${partnerName(s, r.companyId)}) filed a ${money(a.amount)} funds claim`, `/c/approval/mdf-${r.id}`),
+      }
+    }
+    case "chiefMdf": {
+      const r = s.mdf.find((x) => x.id === a.id)!
+      const claim = r.status === "claimed"
+      const status: MdfRequest["status"] = claim ? (a.approve ? "paid" : "claim_rejected") : a.approve ? "approved" : "rejected"
+      const amount = claim ? r.claim!.amount : r.amount
+      return {
+        ...s,
+        mdf: s.mdf.map((x) => (x.id === a.id ? { ...x, status, decidedBy: CHIEF, decidedAt: stamp(), reason: a.reason, claimDue: !claim && a.approve ? "2027-01-31" : x.claimDue, paidAt: claim && a.approve ? stamp() : x.paidAt } : x)),
+        campaigns: !claim && !a.approve ? s.campaigns : s.campaigns.map((c) => (c.id === r.campaignId && c.status === "draft" && a.approve ? { ...c, note: "Funds approved: ready to launch" } : c)),
+        partnerFeed: feed(s, claim
+          ? (a.approve ? `Dana Ortiz approved your ${money(amount)} claim for ${r.campaign}; payment is on its way` : `Dana Ortiz declined your claim for ${r.campaign}: ${a.reason}`)
+          : (a.approve ? `Dana Ortiz approved ${money(amount)} for ${r.campaign}` : `Dana Ortiz declined your funds request for ${r.campaign}: ${a.reason}`), "/p/funds", r.requestedBy),
+        chiefFeed: chiefLog(s, `You ${a.approve ? "approved" : "declined"} ${partnerName(s, r.companyId)}'s ${money(amount)} funds ${claim ? "claim" : "request"}`, "/c/approvals/done"),
+      }
+    }
+
+    /* ---------- partner technical lead ---------- */
+    case "logMilestone": {
+      const e = s.engagements.find((x) => x.id === a.engagementId)!
+      const reg = e.regId ? s.registrations.find((r) => r.id === e.regId) : undefined
+      const oppId = e.oppId ?? reg?.crm?.opportunityId
+      if (!oppId) return s
+      const touch = { id: `t${Date.now()}`, at: stamp(), partnerId: e.companyId, kind: a.kind, text: a.text, by: a.by }
+      // An approved registration has a Salesforce opportunity; create our copy of it the first time someone logs against it.
+      const exists = s.opportunities.some((o) => o.id === oppId)
+      const opportunities = exists
+        ? s.opportunities.map((o) => (o.id === oppId ? { ...o, touches: [...o.touches, touch] } : o))
+        : [{ id: oppId, name: `${e.account} – ${e.product}`, account: e.account, value: e.value, stage: reg?.crmStage ?? "Discovery", closeDate: reg?.closeDate ?? "2027-01-30", owner: e.brightlineAe,
+            lines: [{ partnerId: e.companyId, role: (reg?.crm?.role as PartnerRole) ?? "Sourced", share: 100 }], splitSource: "model" as const, versions: [], touches: [touch] }, ...s.opportunities]
+      // Sell-Ready is earned by delivering on a real deal in that product once certified (R-GR-3).
+      const delivers = ["Workshop", "Design sign-off", "Pilot / POC"].includes(a.kind)
+      const skills = s.skills.map((k) =>
+        k.person === a.by && delivers && k.level === "Certified" && e.product.includes(k.product)
+          ? { ...k, level: "Sell-Ready" as const, evidence: [...k.evidence, { level: "Sell-Ready" as const, text: `${a.kind} on ${e.account}`, at: stamp().slice(0, 10) }], next: `Proven happens automatically when ${e.account}, or another ${k.product} deal you work on, closes won.`, needFor: undefined }
+          : k,
+      )
+      const upgraded = skills.find((k, i) => k.level !== s.skills[i].level)
+      return {
+        ...s,
+        opportunities,
+        skills,
+        engagements: s.engagements.map((x) => (x.id === e.id ? { ...x, oppId, tasks: x.tasks.map((t) => (t.id === a.taskId ? { ...t, status: "done", doneAt: stamp().slice(0, 10) } : t)) } : x)),
+        partnerFeed: [
+          ...(upgraded ? feed(s, `You're now Sell-Ready in ${upgraded.product}`, "/p/skills", a.by, e.companyId).slice(0, 1) : []),
+          ...feed(s, `${a.kind} on ${e.account} recorded as a touch. The attribution agent counts it as evidence`, `/p/work/${e.id}`, a.by, e.companyId),
+        ],
+        notices: notice(s, `${partnerName(s, e.companyId)} logged a delivery milestone`, `${e.account} · ${a.kind} · ${a.by}`, `/opportunity/${oppId}`),
+        activity: log(s, `${a.by} (${partnerName(s, e.companyId)}) logged ${a.kind.toLowerCase()} on ${e.account}`, `/opportunity/${oppId}`),
+      }
+    }
+    case "passExam": {
+      const k = s.skills.find((x) => x.id === a.skillId)!
+      return {
+        ...s,
+        skills: s.skills.map((x) => (x.id === a.skillId ? {
+          ...x, level: "Certified", course: undefined, expires: addDays(NOW.toISOString().slice(0, 10), 730),
+          evidence: [...x.evidence, { level: "Certified", text: `${x.product} technical certification exam (86%)`, at: NOW.toISOString().slice(0, 10) }],
+          next: `Sell-Ready when you deliver a workshop, design or pilot on a ${x.product} deal${x.needFor ? " such as Kestrel Energy" : ""}.`, needFor: undefined,
+        } : x)),
+        partnerFeed: feed(s, `You're certified in ${k.product}. Northpeak's capability score went up`, "/p/skills", k.person, "northpeak"),
+      }
+    }
+
     case "toggleAgent":
       return {
         ...s,

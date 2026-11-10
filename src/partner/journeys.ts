@@ -84,3 +84,87 @@ export const execJourneys: JourneysConfig = {
   cannot: ["See another partner's deals, credit or commercials", "Change credit splits", "Decide registrations"],
   note: "MDF requests and credit disputes are Stage 2 previews.",
 }
+
+export const mktJourneys: JourneysConfig = {
+  title: "Partner marketer: three journeys",
+  sub: "Priya Raman runs campaigns for Ridgeway IT. Most of this arrives in Stage 2.",
+  journeys: [
+    {
+      n: 1, title: "Launch a tracked campaign", tag: "Persona doc · publish content", stage: "Stage 2",
+      steps: [
+        { title: "Picks a Brightline content kit", detail: "Approved emails, posts, landing pages and customer stories, each approved until a set date.", href: "/p/launch", ids: "Personas" },
+        { title: "Makes it Ridgeway's", detail: "Ridgeway's logo in the approved area and a short personal intro. Claims stay locked; the partnership is disclosed.", href: "/p/launch/KIT-1", ids: "Publish content" },
+        { title: "Publishes with her own tracked link", detail: "The Program agent checks the intro for unapproved claims first. Every click, lead and deal from the link is counted for her.", href: "/p/campaigns", ids: "IN-01", main: true },
+      ],
+    },
+    {
+      n: 2, title: "Turn campaign leads into pipeline", tag: "J-04 Partner growth", stage: "Stage 2",
+      steps: [
+        { title: "A lead comes in from her link", detail: "Ridgeway keeps it: Brightline doesn't see it until a rep registers the deal.", href: "/p/leads", ids: "SL-05" },
+        { title: "Hands it to a Ridgeway rep", detail: "The rep sees it in Leads and registers it with the customer already filled in.", href: "/p/leads", ids: "Personas", main: true },
+        { title: "Sees which rep fits best, and why", detail: "AI suggests a rep from past wins in the industry, the product, the region and workload. She can pick anyone.", href: "/p/leads", ids: "Not in the documents", extra: true },
+        { title: "The deal counts as campaign pipeline", detail: "Deals registered from her leads show on the campaign, and as won revenue once they close.", href: "/p/campaigns", ids: "R-GR-1" },
+      ],
+    },
+    {
+      n: 3, title: "Fund it and prove it", tag: "MDF · money approvals", stage: "Stage 2",
+      steps: [
+        { title: "Requests funds before the campaign", detail: "Amount, what it pays for and the result she expects, within Ridgeway's yearly allowance.", href: "/p/funds", ids: "Request MDF" },
+        { title: "Brightline's channel chief decides", detail: "Money always needs a person: no agent can approve it. She's told the moment it's decided.", href: "/p/funds", ids: "R-APR-4", main: true },
+        { title: "Claims with proof after it runs", detail: "Her invoice, plus the results from her tracked link attached for her. Paid once approved.", href: "/p/funds", ids: "R-APR-4" },
+      ],
+    },
+  ],
+  handoffs: [
+    ["To Ridgeway's reps", "Leads from her campaigns, with a suggested owner"],
+    ["From the reps", "Deals registered from her leads count as campaign pipeline"],
+    ["To Dana Ortiz (channel chief)", "Funds requests and claims: every one needs her approval"],
+    ["To Jordan Lee (partner manager)", "Told about each funds request; Dana decides"],
+    ["From Brightline", "Approved content kits and claims"],
+  ],
+  canTitle: "What a partner marketer can and can't do",
+  can: ["Launch campaigns from Brightline kits with her own tracked link", "See her campaigns' leads and the pipeline they produced", "Hand campaign leads to Ridgeway's reps", "Request funds and file claims"],
+  cannot: ["Edit claims or publish unapproved content", "Approve funds", "See Ridgeway's deals, credit or pricing", "Register deals"],
+  note: "Asset engagement reporting (Impartner slide 6) and email opens aren't designed here.",
+}
+
+export const techJourneys: JourneysConfig = {
+  title: "Partner technical lead: three journeys",
+  sub: "Raj Mehta delivers implementations for Northpeak Consulting, a Platinum services partner. Most of this arrives in Stage 2.",
+  journeys: [
+    {
+      n: 1, title: "Climb the skills ladder", tag: "J-04 · capability ladder", stage: "Stage 2",
+      steps: [
+        { title: "Finishes a Brightline course", detail: "Courses run in Brightline's academy and progress syncs back. Learned is the first step.", href: "/p/skills", ids: "R-GR-3" },
+        { title: "Passes the certification exam", detail: "Certified for 2 years. It earns nothing on its own, but Northpeak's capability score goes up.", href: "/p/skills", ids: "R-GR-1", main: true },
+        { title: "Delivers on a real deal", detail: "A workshop, design or pilot makes him Sell-Ready. Proven is automatic when that deal closes won.", href: "/p/log", ids: "R-GR-3" },
+      ],
+    },
+    {
+      n: 2, title: "Deliver and log milestones", tag: "Hand-off flow · joint plan", stage: "Stage 2",
+      steps: [
+        { title: "Picks up a joint-plan task", detail: "Owners and dates agreed with Brightline's account executive and the customer.", href: "/p/work/ENG-1", ids: "J-03" },
+        { title: "Logs the milestone in 30 seconds", detail: "Recorded as a touch on the Salesforce opportunity. Nobody can edit it afterwards.", href: "/p/log/ENG-1/T3", ids: "Log delivery", main: true },
+        { title: "Jordan sees it on the opportunity", detail: "The attribution agent uses it as evidence for Northpeak's credit.", href: "/p/work/ENG-1", ids: "J-02" },
+      ],
+    },
+    {
+      n: 3, title: "See the influence it created", tag: "J-02 Revenue proof", stage: "Stages 1B and 2",
+      steps: [
+        { title: "Sees influenced revenue", detail: "Closed-won deals he delivered on, matched to Salesforce, and Northpeak's credit on them.", href: "/p/influence", ids: "R-CR-9", main: true },
+        { title: "Sees why Northpeak is credited", detail: "Its role and share on each deal, with his milestones as evidence. Other partners stay private.", href: "/p/influence", ids: "R-CR-5" },
+        { title: "Raises a split with Jordan", detail: "If the split looks wrong, he asks Jordan. Disputes arrive in Stage 2.", href: "/p/influence", ids: "R-CR-11 · Stage 2" },
+      ],
+    },
+  ],
+  handoffs: [
+    ["To Jordan Lee (partner manager)", "Delivery milestones, recorded as touches on the opportunity"],
+    ["From Brightline's account executives", "Joint-plan tasks with owners and dates"],
+    ["To the attribution agent", "Evidence for Northpeak's credit"],
+    ["To and from Hannah Cho (Northpeak's admin)", "She registers the deals and adds him to the delivery team"],
+  ],
+  canTitle: "What a partner technical lead can and can't do",
+  can: ["See the Northpeak deals he works on and their joint plans", "Log delivery milestones as touches", "Climb the skills ladder", "See influenced revenue and Northpeak's credit"],
+  cannot: ["Edit a logged milestone", "Register deals or see deals he doesn't work on", "See other partners' shares", "Change credit"],
+  note: "Northpeak's own partner executive, Hannah Cho, isn't a separate portal: Paul's portal shows that role.",
+}

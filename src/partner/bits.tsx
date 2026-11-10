@@ -104,8 +104,9 @@ export function ProtectionMeter({ reg }: { reg: Registration }) {
   )
 }
 
-/** Ridgeway's own share, with any other partners shown only as a count (R-CR-5). */
-export function ShareBar({ c }: { c: CreditItem }) {
+/** The company's own share, with any other partners shown only as a count (R-CR-5). */
+export function ShareBar({ c }: { c: Pick<CreditItem, "share" | "others" | "role"> }) {
+  const { company } = usePartner()
   return (
     <div>
       <div className="flex h-3 overflow-hidden rounded-full bg-muted">
@@ -113,7 +114,7 @@ export function ShareBar({ c }: { c: CreditItem }) {
         {c.others > 0 && <span className="h-full flex-1 bg-[repeating-linear-gradient(135deg,var(--muted),var(--muted)_6px,var(--border)_6px,var(--border)_12px)]" />}
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[14px]">
-        <span className="font-semibold text-foreground">Ridgeway · {c.role} · {c.share}%</span>
+        <span className="font-semibold text-foreground">{company.short} · {c.role} · {c.share}%</span>
         {c.others > 0 && (
           <span className="inline-flex items-center gap-1.5 text-muted-foreground"><Lock className="size-3.5" /> {c.others} other partner{c.others > 1 ? "s" : ""} · details private</span>
         )}

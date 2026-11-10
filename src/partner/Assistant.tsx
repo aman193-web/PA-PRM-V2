@@ -3,17 +3,75 @@ import { ArrowUp, Sparkles } from "lucide-react"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { money } from "@/lib/format"
+import { date, money } from "@/lib/format"
 import { go } from "@/lib/router"
 import { useStore } from "@/store"
 import { company, nextTier } from "@/partner/data"
 import { daysUntil, partnerNext, partnerStatus, usePartner, usePartnerData } from "@/partner/usePartner"
+import { useMarketing } from "@/partner/useMarketing"
+import { TODAY, useDelivery } from "@/partner/useDelivery"
 
 interface Msg { from: "me" | "ai"; text: string; links?: { label: string; href: string }[] }
 
 const suggestions = {
   rep: ["What needs me today?", "Where is my Acme deal?", "What have I earned this year?", "Register a deal"],
   pexec: ["What is the program worth to us?", "How do we reach Platinum?", "Which leads need a rep?", "How is each rep doing?"],
+  mkt: ["What needs me today?", "What have my campaigns produced?", "How much funding is left?", "Launch a campaign"],
+  tech: ["What needs me today?", "Where am I on the skills ladder?", "What have I influenced this year?", "Log a milestone"],
+}
+
+/** Shortcut suggestions that open a screen instead of asking. */
+const shortcuts: Record<string, string> = { "Register a deal": "/p/register", "Launch a campaign": "/p/launch", "Log a milestone": "/p/log" }
+
+function answerMkt(q: string, m: ReturnType<typeof useMarketing>): Msg {
+  const t = q.toLowerCase()
+  const c = m.campaigns.find((x) => t.includes(x.name.toLowerCase().split(/[: ]/)[0]))
+  if (c && !t.includes("need")) {
+    const st = m.stats[c.id]
+    return { from: "ai", text: `${c.name} is ${c.status}. ${c.clicks.toLocaleString("en-US")} clicks, ${st.leadCount} leads, ${st.regs.length} deals registered (${money(st.pipeline)} open, ${money(st.wonValue)} won).`, links: [{ label: "Open the campaign", href: `/p/campaign/${c.id}` }] }
+  }
+  if (t.includes("need") || t.includes("today")) {
+    const lines = [
+      ...m.toHandOff.map((l) => `• Hand ${l.company} to a rep (${l.industry}, about ${money(l.estValue)}).`),
+      ...m.claimable.map((r) => `• Claim ${money(r.amount)} for ${r.campaign} once it ends (by ${date(r.claimDue!)}).`),
+      ...m.newKits.map((k) => `• New kit from Brightline: ${k.title}.`),
+    ]
+    return { from: "ai", text: lines.length ? `${lines.length} thing${lines.length > 1 ? "s" : ""} for you:\n${lines.join("\n")}` : "Nothing needs you right now.", links: [{ label: "Go to Home", href: "/p/home" }] }
+  }
+  if (t.includes("fund") || t.includes("mdf") || t.includes("budget") || t.includes("money") || t.includes("left"))
+    return { from: "ai", text: `Ridgeway has ${money(m.funds.available)} left to request of its ${money(m.funds.allowance)} this year. ${money(m.funds.waiting)} is waiting for Brightline's decision and ${money(m.funds.committed)} is approved but not yet claimed. Dana Ortiz, Brightline's channel chief, approves every request and claim.`, links: [{ label: "Open Funds", href: "/p/funds" }] }
+  if (t.includes("lead"))
+    return { from: "ai", text: m.toHandOff.length ? `${m.toHandOff.length} lead${m.toHandOff.length > 1 ? "s" : ""} to hand off: ${m.toHandOff.map((l) => l.company).join(", ")}. I suggest a rep for each, with the reason.` : "Every campaign lead has a rep.", links: [{ label: "Open Leads", href: "/p/leads" }] }
+  if (t.includes("produce") || t.includes("pipeline") || t.includes("result") || t.includes("worth") || t.includes("campaign")) {
+    const best = [...m.campaigns].sort((a, b) => (m.stats[b.id].pipeline + m.stats[b.id].wonValue) - (m.stats[a.id].pipeline + m.stats[a.id].wonValue))[0]
+    return { from: "ai", text: `Your campaigns have produced ${money(m.pipeline)} of open pipeline and ${money(m.won)} of won revenue this year.${best ? ` The best so far is ${best.name}.` : ""} Only registered deals count; clicks and leads alone don't.`, links: [{ label: "Open Campaigns", href: "/p/campaigns" }] }
+  }
+  if (t.includes("kit") || t.includes("launch"))
+    return { from: "ai", text: "Pick a Brightline kit, add your intro and publish with your own tracked link. I check the intro for claims Brightline hasn't approved.", links: [{ label: "Launch a campaign", href: "/p/launch" }] }
+  return { from: "ai", text: "I can help with your campaigns, campaign leads and funds. I only see what you can see in this portal." }
+}
+
+function answerTech(q: string, d: ReturnType<typeof useDelivery>): Msg {
+  const t = q.toLowerCase()
+  const v = d.views.find((x) => t.includes(x.e.account.toLowerCase().split(" ")[0]))
+  if (v) {
+    const next = v.myOpenTasks[0]
+    return { from: "ai", text: `${v.e.account} (${v.e.product}, ${money(v.e.value)}) is at ${v.stage}. ${next ? `Your next task: ${next.title}, ${next.due < TODAY ? "overdue since" : "due"} ${date(next.due)}.` : "Nothing open for you."}${v.blockedWhy ? ` ${v.blockedWhy}` : ""}`, links: [{ label: `Open ${v.e.account}`, href: `/p/work/${v.e.id}` }] }
+  }
+  if (t.includes("need") || t.includes("today") || t.includes("task")) {
+    const lines = [
+      ...d.tasks.filter((x) => x.t.due <= "2026-11-03").map((x) => `• ${x.t.title} on ${x.v.e.account} (${x.t.due < TODAY ? "overdue" : `due ${date(x.t.due)}`}).`),
+      ...d.examReady.map((k) => `• Take the ${k.product} certification exam.`),
+    ]
+    return { from: "ai", text: lines.length ? `${lines.length} thing${lines.length > 1 ? "s" : ""} for you:\n${lines.join("\n")}` : "Nothing needs you right now.", links: [{ label: "Go to Home", href: "/p/home" }] }
+  }
+  if (t.includes("skill") || t.includes("ladder") || t.includes("cert") || t.includes("exam"))
+    return { from: "ai", text: d.skills.map((k) => `• ${k.product}: ${k.level}. ${k.next}`).join("\n"), links: [{ label: "Open Skills", href: "/p/skills" }] }
+  if (t.includes("influence") || t.includes("credit") || t.includes("revenue") || t.includes("earn"))
+    return { from: "ai", text: `You've influenced ${money(d.influenced)} of closed-won revenue this year. Northpeak's credit on those deals is ${money(d.creditWon)}. You're delivering on another ${money(d.pipeline)} of open pipeline.`, links: [{ label: "Open Influence", href: "/p/influence" }] }
+  if (t.includes("log") || t.includes("milestone"))
+    return { from: "ai", text: "Pick the deal and the milestone, and say what happened. It's recorded as a touch on the Salesforce opportunity.", links: [{ label: "Log a milestone", href: "/p/log" }] }
+  return { from: "ai", text: "I can help with the deals you work on, your tasks, skills and influence. I only see what you can see in this portal." }
 }
 
 type Data = ReturnType<typeof usePartnerData>
@@ -77,8 +135,10 @@ const Ctx = createContext<{ ask: (q?: string) => void }>({ ask: () => {} })
 export const usePartnerAssistant = () => useContext(Ctx)
 
 export function PartnerAssistantProvider({ children }: { children: ReactNode }) {
-  const { me, isExec } = usePartner()
+  const { me, isExec, isMkt, isTech } = usePartner()
   const d = usePartnerData()
+  const mk = useMarketing()
+  const dl = useDelivery()
   const { state } = useStore()
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([])
@@ -88,7 +148,8 @@ export function PartnerAssistantProvider({ children }: { children: ReactNode }) 
 
   const send = (q: string) => {
     if (!q.trim()) return
-    setMsgs((m) => [...m, { from: "me", text: q }, answer(q, d, isExec, state.team)])
+    const reply = isMkt ? answerMkt(q, mk) : isTech ? answerTech(q, dl) : answer(q, d, isExec, state.team)
+    setMsgs((m) => [...m, { from: "me", text: q }, reply])
     setDraft("")
   }
   const ask = (q?: string) => {
@@ -110,7 +171,7 @@ export function PartnerAssistantProvider({ children }: { children: ReactNode }) 
               <div className="space-y-2">
                 <p className="text-[15px] text-muted-foreground">Try one of these:</p>
                 {suggestions[me.role].map((s) => (
-                  <button key={s} onClick={() => (s === "Register a deal" ? (setOpen(false), go("/p/register")) : send(s))} className="block w-full rounded-[12px] border bg-card px-4 py-3 text-left text-[15px] text-foreground hover:border-primary/60">{s}</button>
+                  <button key={s} onClick={() => (shortcuts[s] ? (setOpen(false), go(shortcuts[s])) : send(s))} className="block w-full rounded-[12px] border bg-card px-4 py-3 text-left text-[15px] text-foreground hover:border-primary/60">{s}</button>
                 ))}
               </div>
             )}
@@ -127,7 +188,7 @@ export function PartnerAssistantProvider({ children }: { children: ReactNode }) 
             <div ref={end} />
           </div>
           <form className="flex gap-2 border-t p-4" onSubmit={(e) => { e.preventDefault(); send(draft) }}>
-            <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Ask about a deal, lead or your credit…" className="h-12 flex-1 text-[15.5px]" />
+            <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={isMkt ? "Ask about a campaign, lead or funds…" : isTech ? "Ask about a deal, task or your skills…" : "Ask about a deal, lead or your credit…"} className="h-12 flex-1 text-[15.5px]" />
             <Button type="submit" size="icon" className="size-12" aria-label="Send"><ArrowUp /></Button>
           </form>
         </SheetContent>

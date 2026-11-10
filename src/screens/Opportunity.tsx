@@ -120,7 +120,7 @@ export function OpportunityScreen({ id }: { id: string }) {
                     <PartnerAvatar name={p.name} className="relative ring-4 ring-card" />
                     <div className="min-w-0 pt-0.5">
                       <p className="text-foreground"><b>{p.name}</b> · {t.text}</p>
-                      <p className="text-[14px] text-muted-foreground">{t.kind} · {date(t.at)}</p>
+                      <p className="text-[14px] text-muted-foreground">{t.kind} · {date(t.at)}{t.by ? ` · logged by ${t.by}` : ""}</p>
                     </div>
                   </li>
                 )

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowRight, Building2, Check, CheckCircle2, Clock3, Inbox, Lock, MapPin, Send, Sparkles, UserRound, X } from "lucide-react"
+import { ArrowRight, Building2, Check, CheckCircle2, Clock3, Inbox, Lock, MapPin, Megaphone, Send, Sparkles, Undo2, UserRound, X } from "lucide-react"
 import { toast } from "sonner"
 import { AddedTag, EmptyState, PageHeader, PageTabs, Panel, SourceTag } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Lead } from "@/data/model"
-import { hoursLeft, money, shortDate } from "@/lib/format"
+import { ago, hoursLeft, money, shortDate } from "@/lib/format"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
 import { leadLeft, suggestRep, usePartner, usePartnerData } from "@/partner/usePartner"
 import { StageTag } from "@/partner/bits"
+import type { CampaignLead } from "@/partner/marketing"
+import { useTeamCampaignLeads } from "@/partner/useMarketing"
 
 const declineReasons = ["No capacity this quarter", "Outside our territory", "Not a fit for our services", "We already know this customer"]
 
@@ -151,9 +153,61 @@ function DoneRow({ l }: { l: Lead }) {
   )
 }
 
+/** A lead from Ridgeway's own campaign, handed over by the marketer. Internal: no 48-hour clock, Brightline doesn't see it yet. */
+function MarketingCard({ l }: { l: CampaignLead }) {
+  const { state, dispatch } = useStore()
+  const { me } = usePartner()
+  const [returning, setReturning] = useState(false)
+  const [why, setWhy] = useState("")
+  const campaign = state.campaigns.find((c) => c.id === l.campaignId)
+  const mine = l.assignee === me.name && l.status === "with_rep"
+  return (
+    <li className="rounded-[14px] border bg-card p-5 shadow-[0_1px_2px_#172b4508]">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <b className="block text-[18px] text-foreground">{l.company}</b>
+          <span className="text-[14.5px] text-muted-foreground">{l.contact}, {l.title} · {l.industry} · {l.region}</span>
+        </div>
+        <span className="text-right"><b className="block text-[18px] text-foreground tabular">{money(l.estValue)}</b><span className="text-[13px] text-muted-foreground">estimated · {l.product}</span></span>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <SourceTag source={`Ridgeway campaign: ${campaign?.name ?? ""}`} />
+        <span className="text-[14px] text-muted-foreground">{l.activity}</span>
+      </div>
+      <p className="mt-2 text-[14px] text-muted-foreground">Handed over by {campaign?.owner ?? "Ridgeway marketing"}{l.handedAt ? ` ${ago(l.handedAt)}` : ""}. Brightline doesn't see it until you register the deal.</p>
+      {mine ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button size="lg" onClick={() => go(`/p/register/${l.id}`)}>Register as a deal <ArrowRight /></Button>
+          <Button size="lg" variant="outline" onClick={() => setReturning(true)}><Undo2 /> Not a fit</Button>
+        </div>
+      ) : (
+        <Badge variant="secondary" className="mt-4">{l.status === "converted" ? `Registered by ${l.assignee}` : l.status === "returned" ? `Handed back by ${l.assignee}` : `With ${l.assignee}`}</Badge>
+      )}
+      <Dialog open={returning} onOpenChange={setReturning}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Hand {l.company} back</DialogTitle>
+            <DialogDescription>{campaign?.owner ?? "Marketing"} sees your reason and can give it to someone else.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-1.5">
+            <Label htmlFor="why" className="text-[15px]">Why it isn't a fit</Label>
+            <Input id="why" value={why} onChange={(e) => setWhy(e.target.value)} className="h-11 text-[15.5px]" placeholder="e.g. Too small for Analytics; better as a referral" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReturning(false)}>Cancel</Button>
+            <Button disabled={why.trim().length < 3} onClick={() => { dispatch({ type: "returnLead", id: l.id, reason: why.trim(), by: me.name }); toast(`${l.company} went back to ${campaign?.owner ?? "marketing"}`); setReturning(false) }}>Hand it back</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </li>
+  )
+}
+
 export function PartnerLeads({ tab }: { tab?: string }) {
   const { isExec } = usePartner()
   const d = usePartnerData()
+  const fromMarketing = useTeamCampaignLeads()
+  const mktOpen = fromMarketing.filter((l) => l.status === "with_rep")
   const working = d.leads.filter((l) => l.status === "accepted")
   const withReps = isExec ? d.leads.filter((l) => l.status === "offered" && l.assignee) : []
   const done = d.leads.filter((l) => ["converted", "declined", "expired"].includes(l.status))
@@ -161,7 +215,7 @@ export function PartnerLeads({ tab }: { tab?: string }) {
   return (
     <div>
       <PageHeader
-        title={<span className="flex flex-wrap items-center gap-3">Leads from Brightline <StageTag /></span>}
+        title={<span className="flex flex-wrap items-center gap-3">Leads <StageTag /></span>}
         sub={isExec ? "Brightline shares inbound leads with Ridgeway. Accept within 48 hours and pick the rep who owns it, or decline so it can go elsewhere." : "Leads sent to you by name, and the ones Paul gave you. Contact details unlock when you accept."}
       />
       <PageTabs
@@ -172,8 +226,12 @@ export function PartnerLeads({ tab }: { tab?: string }) {
           { value: "waiting", label: isExec ? "To accept" : "Waiting for you", icon: <Inbox />, count: d.offers.length + withReps.length, tone: d.offers.length ? "action" : "neutral" },
           { value: "working", label: "Working", icon: <Clock3 />, count: working.length },
           { value: "done", label: "Done", icon: <CheckCircle2 />, count: done.length },
+          { value: "marketing", label: "From Ridgeway marketing", icon: <Megaphone />, count: mktOpen.length, tone: !isExec && mktOpen.length ? "action" : "neutral", hint: "Leads from Ridgeway's own campaigns, handed over by the marketer. Ridgeway keeps them until a rep registers the deal." },
         ]}
       />
+      {t === "marketing" && (fromMarketing.length ? <ul className="grid gap-4">{fromMarketing.map((l) => <MarketingCard key={l.id} l={l} />)}</ul> : (
+        <Panel><EmptyState icon={<Megaphone className="size-6" />} title="Nothing from marketing" body={isExec ? "Leads Priya hands to your reps show here." : "Leads Priya hands you from her campaigns show here."} /></Panel>
+      ))}
       {t === "waiting" && (
         <div className="space-y-6">
           {d.offers.length ? <ul className="grid gap-4">{d.offers.map((l) => <OfferCard key={l.id} l={l} />)}</ul> : <Panel><EmptyState icon={<Inbox className="size-6" />} title="No leads waiting" body="New leads from Brightline appear here with 48 hours to accept." /></Panel>}

@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button"
 import { money } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
-import { benefitsNow, company, mdf, nextTier, tierLadder } from "@/partner/data"
+import { benefitsNow, company, nextTier, tierLadder } from "@/partner/data"
 import { StageTag } from "@/partner/bits"
+import { mdfSummary } from "@/partner/useMarketing"
+import { FundsBar } from "@/partner/screens/mkt/Funds"
 
 export function Program() {
   const { state, dispatch } = useStore()
@@ -15,6 +17,8 @@ export function Program() {
   const certified = state.team.filter((m) => m.certified && m.status === "active").length
   const reqs = nextTier.requirements.map((r) => (r.label === "Certified sales reps" ? { ...r, have: certified } : r))
   const met = reqs.filter((r) => r.have >= r.need).length
+  const funds = mdfSummary(state, company.id)
+  const latest = funds.all[0]
 
   return (
     <div className="space-y-6">
@@ -87,16 +91,15 @@ export function Program() {
         </Panel>
       </div>
 
-      <Panel title={<span className="flex flex-wrap items-center gap-3">Marketing development funds <StageTag /></span>} sub="Request funds for campaigns with Brightline. Requests and claims arrive in Stage 2.">
-        <div className="flex flex-wrap items-center gap-6">
-          <span className="grid size-12 place-items-center rounded-[12px] bg-brand-soft text-primary"><CircleDollarSign className="size-6" /></span>
-          <div><p className="text-[14.5px] text-muted-foreground">Available this year</p><p className="text-[28px] font-bold text-foreground tabular">{money(mdf.available)}</p></div>
-          <div className="min-w-52 flex-1">
-            <div className="flex justify-between text-[14px] text-muted-foreground"><span>{money(mdf.used)} used</span><span>{money(mdf.yearly)} a year</span></div>
-            <div className="mt-1.5 h-2.5 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${(mdf.used / mdf.yearly) * 100}%` }} /></div>
+      <Panel title={<span className="flex flex-wrap items-center gap-3">Marketing development funds <StageTag /></span>} sub={`${money(funds.allowance)} a year at ${company.tier}. Priya Raman runs Ridgeway's campaigns and requests; Brightline's channel chief approves every request and claim.`}>
+        <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
+          <div className="flex items-center gap-4">
+            <span className="grid size-12 place-items-center rounded-[12px] bg-brand-soft text-primary"><CircleDollarSign className="size-6" /></span>
+            <div><p className="text-[14.5px] text-muted-foreground">Available to request</p><p className="text-[28px] font-bold text-foreground tabular">{money(funds.available)}</p></div>
           </div>
-          <Button variant="outline" disabled>Request funds</Button>
+          <FundsBar {...funds} />
         </div>
+        {latest && <p className="mt-4 text-[14.5px] text-muted-foreground">Latest: {latest.campaign} · {money(latest.amount)} · requested by {latest.requestedBy}</p>}
       </Panel>
     </div>
   )

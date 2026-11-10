@@ -1,6 +1,6 @@
-# PRM · four-portal prototype
+# PRM · six-portal prototype
 
-A clickable prototype of the PRM with four portals, each showing only what that person may see and do:
+A clickable prototype of the PRM with six portals, each showing only what that person may see and do:
 
 | Portal | Person | Routes | Spec |
 |---|---|---|---|
@@ -8,6 +8,8 @@ A clickable prototype of the PRM with four portals, each showing only what that 
 | Channel chief | Dana Ortiz (Brightline) | `#/c/…` | [docs/Channel_Chief_Spec.md](docs/Channel_Chief_Spec.md) |
 | Partner executive | Paul Okafor (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
 | Partner sales rep | Marcus Bell (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
+| Partner marketer | Priya Raman (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §8 |
+| Partner technical lead | Raj Mehta (Northpeak Consulting) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §9 |
 
 The app opens on a demo-only **Choose a portal** page.
 

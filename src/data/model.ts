@@ -189,6 +189,8 @@ export interface Registration {
   lostReason?: string
   /** The partner's answer to an info request; the SLA resumes from where it paused. */
   infoReply?: { text: string; at: string; by: string }
+  /** The partner's own campaign that produced the deal (a lead from the marketer's tracked link). */
+  campaignId?: string
 }
 
 export interface ExtensionRequest {
@@ -275,6 +277,8 @@ export interface Touch {
   partnerId: string
   kind: string
   text: string
+  /** The partner person who logged it, when known (e.g. a technical lead's delivery milestone). */
+  by?: string
 }
 
 export interface SplitVersion {
@@ -652,9 +656,9 @@ export const pipelineRegistrations: Registration[] = [
   past({ id: "REG-1820", partnerId: "clearpath", rep: "Luis Ortega", customer: "Lakeside Dental", product: "Analytics · Standard", value: 22000, closeDate: "2026-10-15", submittedAt: "2026-07-02T09:00:00", program: "Referral", state: "lost", crmStage: "Closed lost", lostReason: "Chose a competitor",
     decision: { by: "rules", action: "approved", at: "2026-07-02T09:00:38", seconds: 38 }, crm: { opportunityId: "006Q8000015LksD", role: "Referral", sync: "synced", linked: "new" } }),
   past({ id: "REG-1790", partnerId: "ridgeway", rep: "Marcus Bell", customer: "Prairie Foods", product: "Analytics · Standard", value: 44000, closeDate: "2026-11-20", submittedAt: "2026-08-08T09:00:00", program: "Reseller", state: "approved", crmStage: "Negotiation", protectedUntil: "2026-11-06",
-    decision: { by: "you", action: "approved", at: "2026-08-08T13:20:00" }, crm: { opportunityId: "006Q8000018PrfD", role: "Reseller", sync: "synced", linked: "new" } }),
+    decision: { by: "you", action: "approved", at: "2026-08-08T13:20:00" }, crm: { opportunityId: "006Q8000018PrfD", role: "Reseller", sync: "synced", linked: "new" }, campaignId: "CMP-13" }),
   past({ id: "REG-1612", partnerId: "ridgeway", rep: "Marcus Bell", customer: "Lakeshore Hotels", product: "Analytics · Enterprise", value: 124000, closeDate: "2026-09-18", submittedAt: "2026-05-04T09:00:00", program: "Reseller", state: "won", crmStage: "Closed won",
-    decision: { by: "you", action: "approved", at: "2026-05-04T15:00:00" }, crm: { opportunityId: "006Q8000013LksH", role: "Sourced", sync: "synced", linked: "new" } }),
+    decision: { by: "you", action: "approved", at: "2026-05-04T15:00:00" }, crm: { opportunityId: "006Q8000013LksH", role: "Sourced", sync: "synced", linked: "new" }, campaignId: "CMP-12" }),
   past({ id: "REG-1580", partnerId: "ridgeway", rep: "Jenna Ruiz", customer: "Brennan Logistics", product: "Platform · Enterprise", value: 96000, closeDate: "2026-07-30", submittedAt: "2026-04-10T09:00:00", program: "Reseller", state: "won", crmStage: "Closed won",
     decision: { by: "you", action: "approved", at: "2026-04-10T14:00:00" }, crm: { opportunityId: "006Q8000012BrnL", role: "Reseller", sync: "synced", linked: "new" } }),
   past({ id: "REG-1490", partnerId: "ridgeway", rep: "Marcus Bell", customer: "Union Dental Group", product: "Analytics · Standard", value: 58000, closeDate: "2026-05-12", submittedAt: "2026-02-16T09:00:00", program: "Reseller", state: "won", crmStage: "Closed won",
@@ -848,6 +852,33 @@ export const onboarding: Onboarding[] = [
 
 export const opportunities: Opportunity[] = [
   {
+    id: "006Q8000019GrnL", name: "Granite Labs – Platform proof of concept", account: "Granite Labs", value: 88000,
+    stage: "Proposal", closeDate: "2026-12-15", owner: "Alex Morgan",
+    lines: [{ partnerId: "northpeak", role: "Sourced", share: 100 }],
+    splitSource: "model", versions: [],
+    touches: [
+      { id: "t1", at: "2026-08-05T11:00:00", partnerId: "northpeak", kind: "Registration", text: "Registered the deal (REG-1912)", by: "Hannah Cho" },
+      { id: "t2", at: "2026-10-09T16:00:00", partnerId: "northpeak", kind: "Pilot / POC", text: "Proof-of-concept environment live for the lab team", by: "Raj Mehta" },
+    ],
+  },
+  {
+    id: "006Q8000015PncU", name: "Pinecrest Utilities – Platform rollout", account: "Pinecrest Utilities", value: 150000,
+    stage: "Closed won", closeDate: "2026-09-25", owner: "Priya Nair",
+    lines: [
+      { partnerId: "orbitwise", role: "Reseller", share: 60 },
+      { partnerId: "northpeak", role: "Implementation", share: 40 },
+    ],
+    splitSource: "model",
+    versions: [{ version: 1, at: "2026-07-07T10:00:00", by: "Attribution agent", note: "Role-based split applied when Northpeak joined for implementation", lines: [] }],
+    touches: [
+      { id: "t1", at: "2026-06-18T10:00:00", partnerId: "orbitwise", kind: "Commercial", text: "Quoted and handled procurement" },
+      { id: "t2", at: "2026-07-07T10:00:00", partnerId: "northpeak", kind: "Kickoff", text: "Project kickoff with the operations team", by: "Raj Mehta" },
+      { id: "t3", at: "2026-08-04T15:00:00", partnerId: "northpeak", kind: "Design sign-off", text: "Solution design signed off by the customer", by: "Raj Mehta" },
+      { id: "t4", at: "2026-09-22T09:00:00", partnerId: "northpeak", kind: "Go-live", text: "Went live at both sites", by: "Raj Mehta" },
+    ],
+    reconciliation: "matched", reconciliationNote: "Matches Salesforce closed-won: $150,000 on Sep 25, 2026",
+  },
+  {
     id: "006Q8000024HrvL", name: "Harborview Logistics – Fleet analytics", account: "Harborview Logistics", value: 210000,
     stage: "Negotiation", closeDate: "2026-11-20", owner: "Priya Nair",
     lines: [
@@ -858,12 +889,12 @@ export const opportunities: Opportunity[] = [
     splitSource: "model",
     versions: [{ version: 1, at: "2026-09-30T10:00:00", by: "Attribution agent", note: "Role-based split applied when Ridgeway joined", lines: [] }],
     touches: [
-      { id: "t1", at: "2026-08-04T09:00:00", partnerId: "northpeak", kind: "Registration", text: "Registered the deal (REG-1755)" },
-      { id: "t2", at: "2026-08-19T14:00:00", partnerId: "northpeak", kind: "Workshop", text: "Ran the discovery workshop with the CIO and fleet team" },
+      { id: "t1", at: "2026-08-04T09:00:00", partnerId: "northpeak", kind: "Registration", text: "Registered the deal (REG-1755)", by: "Hannah Cho" },
+      { id: "t2", at: "2026-08-19T14:00:00", partnerId: "northpeak", kind: "Workshop", text: "Ran the discovery workshop with the CIO and fleet team", by: "Raj Mehta" },
       { id: "t3", at: "2026-09-30T11:00:00", partnerId: "ridgeway", kind: "Commercial", text: "Handled pricing and procurement paperwork" },
       { id: "t4", at: "2026-10-08T15:00:00", partnerId: "bluefin", kind: "Demo", text: "Integration demo with the customer's cloud team" },
-      { id: "t5", at: "2026-10-21T10:00:00", partnerId: "northpeak", kind: "Meeting", text: "Executive alignment meeting; built the rollout plan" },
-      { id: "t6", at: "2026-10-24T16:00:00", partnerId: "northpeak", kind: "Proposal", text: "Wrote the implementation statement of work" },
+      { id: "t5", at: "2026-10-21T10:00:00", partnerId: "northpeak", kind: "Meeting", text: "Executive alignment meeting; built the rollout plan", by: "Hannah Cho" },
+      { id: "t6", at: "2026-10-24T16:00:00", partnerId: "northpeak", kind: "Design sign-off", text: "Wrote the implementation statement of work", by: "Raj Mehta" },
     ],
   },
   {

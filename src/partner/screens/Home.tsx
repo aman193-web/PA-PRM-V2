@@ -13,7 +13,7 @@ import { daysUntil, leadLeft, usePartner, usePartnerData, usePartnerFeed } from 
 import { usePartnerAssistant } from "@/partner/Assistant"
 import { CompactDeals, DealRows, Kpi } from "@/partner/bits"
 
-interface Todo { key: string; icon: ReactNode; tone: "bad" | "amber" | "primary"; title: string; body: string; cta: string; href: string; tag: string }
+export interface Todo { key: string; icon: ReactNode; tone: "bad" | "amber" | "primary"; title: string; body: string; cta: string; href: string; tag: string }
 
 function useTodos(): Todo[] {
   const { state } = useStore()
@@ -35,11 +35,15 @@ function useTodos(): Todo[] {
 const toneTile = { bad: "bg-bad-soft text-bad", amber: "bg-amber-soft text-amber-ink", primary: "bg-brand-soft text-primary" }
 
 function NeedsYou() {
-  const todos = useTodos()
+  return <TodoPanel todos={useTodos()} empty="Nothing needs you right now. We'll notify you when Jordan replies or a lead arrives." />
+}
+
+/** The "Needs you" list every partner home uses: one card per thing to do, most urgent first. */
+export function TodoPanel({ todos, empty }: { todos: Todo[]; empty: string }) {
   return (
     <Panel title="Needs you" sub={todos.length ? "Most urgent first." : undefined}>
       {todos.length === 0 ? (
-        <p className="text-muted-foreground">Nothing needs you right now. We'll notify you when Jordan replies or a lead arrives.</p>
+        <p className="text-muted-foreground">{empty}</p>
       ) : (
         <ul className="space-y-3">
           {todos.map((t) => (
@@ -61,7 +65,7 @@ function NeedsYou() {
   )
 }
 
-function Recent() {
+export function Recent() {
   const items = usePartnerFeed()
   return (
     <Panel title="Recent">
@@ -80,7 +84,7 @@ function Recent() {
   )
 }
 
-function ManagerPanel() {
+export function ManagerPanel() {
   return (
     <Panel title="Your partner manager" className="lg:hidden">
       <div className="flex items-center gap-3">
@@ -98,7 +102,7 @@ function ManagerPanel() {
   )
 }
 
-function greeting() {
+export function greeting() {
   return "Good afternoon"
 }
 

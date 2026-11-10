@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { ArrowRight, CircleArrowUp, Clock3, Cpu, Download, PieChart, Scale, Sparkles, Timer, UserPlus } from "lucide-react"
+import { ArrowRight, CircleArrowUp, Clock3, Cpu, Download, PieChart, Scale, Sparkles, Timer, UserPlus, Coins } from "lucide-react"
 import { Panel, PartnerAvatar } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { useChiefAssistant } from "@/chief/ChiefShell"
 import { exportBoardView } from "@/chief/screens/Partners"
 
 export const kindIcon: Record<ApprovalKind, ReactNode> = {
-  deal: <Timer />, split: <Scale />, extension: <Clock3 />, application: <UserPlus />, rule: <CircleArrowUp />, autonomy: <Cpu />,
+  deal: <Timer />, split: <Scale />, extension: <Clock3 />, application: <UserPlus />, rule: <CircleArrowUp />, autonomy: <Cpu />, funds: <Coins />,
 }
 export const toneTile = { bad: "bg-bad-soft text-bad", amber: "bg-amber-soft text-amber-ink", primary: "bg-brand-soft text-primary" }
 

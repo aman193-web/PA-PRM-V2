@@ -3,7 +3,7 @@ import { hoursLeft, money } from "@/lib/format"
 import { pipelineOf, slaPct, useQueue, useStore } from "@/store"
 import { otherManagers, otherPartners, type Manager } from "@/chief/data"
 
-export type ApprovalKind = "deal" | "split" | "extension" | "application" | "rule" | "autonomy"
+export type ApprovalKind = "deal" | "split" | "extension" | "application" | "rule" | "autonomy" | "funds"
 
 export interface Approval {
   id: string
@@ -18,7 +18,7 @@ export interface Approval {
 }
 
 export const kindLabel: Record<ApprovalKind, string> = {
-  deal: "Escalated deal", split: "Credit split", extension: "Second extension", application: "Application", rule: "Program rule", autonomy: "AI autonomy",
+  deal: "Escalated deal", split: "Credit split", extension: "Second extension", application: "Application", rule: "Program rule", autonomy: "AI autonomy", funds: "Marketing funds",
 }
 
 /** Everything waiting on the channel chief, built from live data so decisions made elsewhere clear it. */
@@ -35,6 +35,11 @@ export function useApprovals() {
       out.push({ id: `ext-${e.id}`, kind: "extension", title: `${e.customer} · ${name(e.partnerId)}`, sub: `Asks for ${e.requestedDays} more days · protection ends in ${e.daysLeft} days · already extended once`, from: name(e.partnerId), at: e.protectionEnds, tone: e.daysLeft <= 5 ? "bad" : "amber", tag: `${e.daysLeft} days left`, value: e.value })
     for (const a of state.applications.filter((x) => x.status === "escalated"))
       out.push({ id: `app-${a.id}`, kind: "application", title: `${a.company} wants to join`, sub: `${a.program} · ${a.region} · ${a.employees} people`, from: "Jordan Lee", at: a.appliedAt, tone: "primary", tag: "Escalated" })
+    // Marketing funds: requests and claims. Money always needs a human (R-APR-4).
+    for (const m of state.mdf.filter((x) => x.status === "submitted" || x.status === "claimed")) {
+      const claim = m.status === "claimed"
+      out.push({ id: `mdf-${m.id}`, kind: "funds", title: `${m.campaign} · ${name(m.companyId)}`, sub: claim ? `Claim with proof · ${m.claim!.results}` : `${m.activity} · expects ${m.expected}`, from: `${m.requestedBy} (${name(m.companyId)})`, at: claim ? m.claim!.at : m.submittedAt, tone: "primary", tag: claim ? "Claim" : "Funds request", value: claim ? m.claim!.amount : m.amount })
+    }
     for (const r of state.requests.filter((x) => x.status === "pending"))
       out.push({ id: `req-${r.id}`, kind: r.kind, title: r.title, sub: `${r.programs === "all" ? "All programs" : r.programs.map((p) => `${p} program`).join(", ")} · ${r.current} → ${r.proposed}`, from: `${r.from} (${r.fromRole})`, at: r.at, tone: "primary", tag: r.kind === "rule" ? "Rule change" : "Autonomy" })
     const order = { bad: 0, amber: 1, primary: 2 }
