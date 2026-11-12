@@ -10,6 +10,10 @@ import { agreementsSeed, teamSeed, type Agreement as PartnerAgreement, type Team
 import { agents as agentSeed, requestsSeed, rulesSeed, type ChangeRequest, type ProgramId, type RuleSet } from "@/chief/data"
 import { campaignLeadsSeed, campaignsSeed, mdfSeed, type Campaign, type CampaignLead, type MdfRequest } from "@/partner/marketing"
 import { engagementsSeed, skillsSeed, type Engagement, type Skill } from "@/partner/delivery"
+import {
+  cosellSeed, defaultPlan, exceptionsSeed, execApprovalsSeed, ledgerSeed, sellerAccounts,
+  type CoSellRequest, type DataException, type ExecApproval, type LedgerEntry, type PlanStep,
+} from "@/vendor/data"
 
 /** Something that happened on the partner side. `rep` limits it to that person (and their company's admin). Ridgeway unless `companyId` says otherwise. */
 export interface PartnerFeedItem { id: string; at: string; text: string; href?: string; rep?: string; companyId?: string }
@@ -49,6 +53,20 @@ export interface State {
   /* Partner technical lead (Stage 2) */
   engagements: Engagement[]
   skills: Skill[]
+  /* RevOps */
+  exceptions: DataException[]
+  ledger: LedgerEntry[]
+  opsFeed: ActivityItem[]
+  /** Programs launched from a template since the demo started (the Marketplace program). */
+  launched: ProgramId[]
+  /* Field seller */
+  cosell: CoSellRequest[]
+  /** Context a Brightline seller added to a registration on their account, for the partner manager. */
+  sellerNotes: Record<string, { by: string; at: string; text: string }[]>
+  sellerFeed: ActivityItem[]
+  /* CEO / CFO */
+  execApprovals: ExecApproval[]
+  execFeed: ActivityItem[]
 }
 
 const initial: State = {
@@ -94,11 +112,36 @@ const initial: State = {
   mdf: mdfSeed,
   engagements: engagementsSeed,
   skills: skillsSeed,
+  exceptions: exceptionsSeed,
+  ledger: ledgerSeed,
+  launched: [],
+  opsFeed: [
+    { id: "o1", at: "2026-10-28T09:40:00", text: "The sync agent flagged two Salesforce accounts that look like one company", href: "/v/exception/EX-43" },
+    { id: "o2", at: "2026-10-28T06:30:00", text: "Orchid Foods has had no Salesforce activity for 52 days", href: "/v/exception/EX-44" },
+    { id: "o3", at: "2026-10-27T16:00:00", text: "You asked Dana Ortiz to raise the Reseller auto-approve limit for top partners", href: "/v/programs" },
+    { id: "o4", at: "2026-10-27T15:12:30", text: "Salesforce timed out writing Atlas's role on Orion Labs; retrying", href: "/v/exception/EX-41" },
+    { id: "o5", at: "2026-10-03T07:00:00", text: "Credit on Cedar Valley Schools is on hold: the amounts differ", href: "/v/exception/EX-42" },
+  ],
+  cosell: cosellSeed,
+  sellerNotes: {},
+  sellerFeed: [
+    { id: "s1", at: "2026-10-28T08:10:00", text: "Ridgeway IT registered a deal on Acme Manufacturing, your account. Jordan Lee is reviewing it", href: "/v/account/acme" },
+    { id: "s2", at: "2026-10-27T10:20:00", text: "Northpeak Consulting registered Kestrel Energy. Raj Mehta is named for the solution design", href: "/v/account/kestrel" },
+    { id: "s3", at: "2026-10-15T16:00:00", text: "Atlas finished the solution design on Brookside Bank", href: "/v/account/brookside" },
+  ],
+  execApprovals: execApprovalsSeed,
+  execFeed: [
+    { id: "e1", at: "2026-10-27T11:00:00", text: "Dana Ortiz sent you Northpeak's $21,600 rebate to approve", href: "/v/approval/RW-14" },
+    { id: "e2", at: "2026-10-26T15:00:00", text: "Dana Ortiz proposed attribution model version 3", href: "/v/approval/AM-3" },
+    { id: "e3", at: "2026-10-09T18:00:00", text: "Pinnacle Health Network closed won: $96,000, verified", href: "/v/revenue" },
+  ],
   agentLevels: Object.fromEntries(agentSeed.map((a) => [a.id, a.level])),
   chiefFeed: [
     { id: "cf1", at: "2026-10-28T10:20:00", text: "Kestrel Energy passed 80% of its review deadline with Jordan Lee", href: "/c/approval/reg-REG-2038" },
     { id: "cf2", at: "2026-10-27T17:05:00", text: "Jordan Lee proposed a new credit split on Brookside Bank", href: "/c/approval/split-006Q8000020BrkS" },
     { id: "cf3", at: "2026-10-27T16:00:00", text: "Ana Costa (RevOps) asked to raise the auto-approve limit for top partners", href: "/c/approval/req-CR-21" },
+    { id: "cf6", at: "2026-10-27T11:00:00", text: "Northpeak's $21,600 rebate is with Morgan Hale (CFO): rewards over $20,000 need the CFO" },
+    { id: "cf7", at: "2026-10-26T15:00:00", text: "Attribution model version 3 is with Morgan Hale (CFO) for approval" },
     { id: "cf4", at: "2026-10-26T11:30:00", text: "Lee Park asked for more autonomy for the Deal Desk agent", href: "/c/approval/req-CR-22" },
     { id: "cf5", at: "2026-10-24T15:00:00", text: "Jordan Lee escalated the Tidewater Systems application", href: "/c/approval/app-APP-113" },
   ],
@@ -153,6 +196,18 @@ type Action =
   // partner technical lead
   | { type: "logMilestone"; engagementId: string; kind: string; text: string; taskId?: string; by: string }
   | { type: "passExam"; skillId: string }
+  // RevOps
+  | { type: "resolveException"; id: string; choice: string; note?: string }
+  | { type: "proposeRule"; req: ChangeRequest }
+  // field seller (co-sell is Stage 2)
+  | { type: "sendCoSell"; req: CoSellRequest }
+  | { type: "cosellRespond"; id: string; accept: boolean; by: string; owner?: string; reason?: string }
+  | { type: "planToggle"; id: string; stepId: string }
+  | { type: "planAdd"; id: string; step: PlanStep }
+  | { type: "sellerNote"; regId: string; text: string; by: string }
+  // CEO / CFO
+  | { type: "execDecide"; id: string; approve: boolean; note?: string }
+  | { type: "shareBoard" }
 
 const stamp = () => NOW.toISOString()
 const log = (s: State, text: string, href?: string): ActivityItem[] => [
@@ -169,7 +224,11 @@ const notice = (s: State, title: string, body: string, href: string, tone: Notic
   ...s.notices,
 ]
 const CHIEF = "Dana Ortiz"
+const OPS = "Ana Costa"
+const SELLER = "Sam Rivera"
+const CFO = "Morgan Hale"
 const chiefLog = (s: State, text: string, href?: string): ActivityItem[] => [{ id: `c${Date.now()}${Math.random()}`, at: stamp(), text, href }, ...s.chiefFeed]
+const item = (list: ActivityItem[], text: string, href?: string): ActivityItem[] => [{ id: `v${Date.now()}${Math.random()}`, at: stamp(), text, href }, ...list]
 const daysTo = (iso: string) => Math.ceil((new Date(`${iso}T12:00:00`).getTime() - NOW.getTime()) / 86_400_000)
 
 /** Role-based split (the launch default suggested in D8): role weights, normalised to 100. */
@@ -492,13 +551,15 @@ function reducer(s: State, a: Action): State {
       if (a.approve && r.kind === "rule" && r.programs !== "all")
         for (const p of r.programs) {
           const cur = programRules[p]
-          programRules[p] = { ...cur, version: cur.version + 1, autoApproveTop: 75_000, history: [{ version: cur.version + 1, at: stamp(), by: `${CHIEF} approved ${r.from}'s change`, note: r.proposed }, ...cur.history] }
+          programRules[p] = { ...cur, ...(r.patch ?? { autoApproveTop: 75_000 }), version: cur.version + 1, history: [{ version: cur.version + 1, at: stamp(), by: `${CHIEF} approved ${r.from}'s ${r.launch ? "set-up" : "change"}`, note: r.proposed }, ...cur.history] }
         }
       const scope = r.programs === "all" ? "every program" : r.programs.map((p) => `the ${p} program`).join(", ")
       return {
         ...s,
         requests: s.requests.map((x) => (x.id === a.id ? { ...x, status: a.approve ? "approved" : "declined", note: a.note } : x)),
         programRules,
+        launched: a.approve && r.launch && r.programs !== "all" ? [...s.launched, ...r.programs] : s.launched,
+        opsFeed: r.from === OPS ? item(s.opsFeed, `${CHIEF} ${a.approve ? "approved" : "declined"}: ${r.title}${a.note ? `. "${a.note}"` : ""}`, "/v/programs") : s.opsFeed,
         agentLevels: a.approve && r.kind === "autonomy" ? { ...s.agentLevels, "deal-desk": "A4" } : s.agentLevels,
         notices: a.approve && r.kind === "rule" ? notice(s, "Program rules changed", `${r.title}. Applies to ${scope}, whoever looks after the partner.`, "/home") : s.notices,
         activity: a.approve && r.kind === "rule" ? log(s, `${CHIEF} approved a rule change for ${scope}: ${r.proposed}`) : s.activity,
@@ -516,7 +577,7 @@ function reducer(s: State, a: Action): State {
     }
     case "handOffLead": {
       const l = s.campaignLeads.find((x) => x.id === a.id)!
-      const handed = { id: `pf${Date.now()}h`, at: stamp(), text: `${a.by} handed you a lead from her campaign: ${l.company}`, href: "/p/leads", rep: a.rep }
+      const handed = { id: `pf${Date.now()}h`, at: stamp(), text: `${a.by} handed you a campaign lead: ${l.company}`, href: "/p/leads", rep: a.rep }
       return {
         ...s,
         campaignLeads: s.campaignLeads.map((x) => (x.id === a.id ? { ...x, status: "with_rep", assignee: a.rep, handedAt: stamp(), returnReason: undefined } : x)),
@@ -616,6 +677,146 @@ function reducer(s: State, a: Action): State {
       }
     }
 
+    /* ---------- RevOps ---------- */
+    case "resolveException": {
+      const x = s.exceptions.find((e) => e.id === a.id)!
+      let next: Partial<State> = {}
+      let status: DataException["status"] = "resolved"
+      let text = ""
+      let ledgerId: string | undefined
+      if (x.kind === "mismatch" && a.choice === "ledger") {
+        const o = s.opportunities.find((y) => y.id === x.oppId)!
+        const sf = x.sfAmount ?? o.value
+        const diff = sf - o.value
+        ledgerId = `LE-${204 + s.ledger.length}`
+        const names = o.lines.map((l) => partnerName(s, l.partnerId)).join(" and ")
+        text = `Ledger entry ${ledgerId}: ${diff < 0 ? "−" : "+"}${money(Math.abs(diff))} to match Salesforce. Credit released to ${names}.`
+        next = {
+          opportunities: s.opportunities.map((y) => (y.id === o.id ? { ...y, value: sf, reconciliation: "matched", reconciliationNote: `Matches Salesforce closed-won: ${money(sf)}, after ledger entry ${ledgerId} by ${OPS} (RevOps)` } : y)),
+          ledger: [{ id: ledgerId, at: stamp(), account: o.account, oppId: o.id, text: `Correction to match Salesforce closed-won: ${money(o.value)} → ${money(sf)}. Shares unchanged; credit released`, amount: diff, by: OPS }, ...s.ledger],
+          crmIssues: s.crmIssues.filter((i) => i.id !== x.issueId),
+          notices: notice(s, `${o.account} is reconciled`, `${OPS} (RevOps) matched it to Salesforce: ${money(sf)}. Partner credit is released`, `/opportunity/${o.id}`),
+          activity: log(s, `${OPS} (RevOps) reconciled ${o.account} to Salesforce closed-won (${money(sf)})`, `/opportunity/${o.id}`),
+        }
+      } else if (x.kind === "mismatch") {
+        status = "waiting"
+        text = "Asked Alex Morgan, the opportunity owner, to check the amount in Salesforce. Credit stays on hold meanwhile."
+        next = { crmIssues: s.crmIssues.map((i) => (i.id === x.issueId ? { ...i, reported: true } : i)) }
+      } else if (x.kind === "write" && a.choice === "retry") {
+        text = "Retried and written: Atlas Integrators is the Implementation partner on the opportunity in Salesforce."
+        next = {
+          crmWrites: s.crmWrites.map((w) => (w.href === `/registration/${x.regId}` && w.status !== "synced" ? { ...w, status: "synced", attempt: undefined } : w)),
+          crmIssues: s.crmIssues.filter((i) => i.id !== x.issueId),
+          activity: log(s, `${OPS} (RevOps) retried the Salesforce write on Orion Labs; it's in Salesforce now`, `/registration/${x.regId}`),
+        }
+      } else if (x.kind === "write") {
+        status = "waiting"
+        text = "Left to the automatic retries. Next try in 3 minutes; you're told if all 5 fail."
+      } else if (x.kind === "match") {
+        text = a.choice === "same" ? "Treated as one company: conflict checks now cover both records. Kai Brennan (CRM admin) was asked to merge them in Salesforce." : "Kept apart as two companies. The agent won't flag this pair again."
+      } else if (a.choice === "jordan") {
+        status = "waiting"
+        text = "Sent to Jordan Lee to check with Summit Resale."
+        next = { notices: notice(s, `${OPS} (RevOps): Orchid Foods has gone quiet`, "No Salesforce activity for 52 days and protection ends Nov 1. Can you check with Summit Resale?", `/registration/${x.regId}`, "warn") }
+      } else {
+        text = "Reviewed. Nothing changed; protection ends on Nov 1 as planned."
+      }
+      if (a.note) text = `${text} Note: ${a.note}`
+      return {
+        ...s,
+        ...next,
+        exceptions: s.exceptions.map((e) => (e.id === a.id ? { ...e, status, resolution: { by: OPS, at: stamp(), text, ledgerId, choice: a.choice } } : e)),
+        opsFeed: item(s.opsFeed, `You ${status === "waiting" ? "handed on" : "resolved"}: ${x.title}`, `/v/exception/${x.id}`),
+      }
+    }
+    case "proposeRule":
+      return {
+        ...s,
+        requests: [a.req, ...s.requests],
+        chiefFeed: chiefLog(s, `${a.req.from} (${a.req.fromRole}) sent you a ${a.req.launch ? "new program" : "rule change"}: ${a.req.title}`, `/c/approval/req-${a.req.id}`),
+        opsFeed: item(s.opsFeed, `You sent ${CHIEF} ${a.req.launch ? "a new program" : "a rule change"}: ${a.req.title}`, "/v/programs"),
+      }
+
+    /* ---------- field seller ---------- */
+    case "sendCoSell": {
+      const r = a.req
+      const acct = sellerAccounts.find((x) => x.id === r.accountId)!
+      return {
+        ...s,
+        cosell: [r, ...s.cosell],
+        sellerFeed: item(s.sellerFeed, `You asked ${partnerName(s, r.partnerId)} to co-sell ${acct.name}`, `/v/cosell`),
+        partnerFeed: r.partnerId === "ridgeway" ? feed(s, `${SELLER} (Brightline) asked you to co-sell a ${acct.industry.toLowerCase()} deal. Accept within 48 hours to see the account`, "/p/leads/cosell", r.contact) : s.partnerFeed,
+        activity: log(s, `${SELLER} (Brightline seller) sent ${partnerName(s, r.partnerId)} a co-sell request`),
+      }
+    }
+    case "cosellRespond": {
+      const r = s.cosell.find((x) => x.id === a.id)!
+      const acct = sellerAccounts.find((x) => x.id === r.accountId)!
+      const partner = partnerName(s, r.partnerId)
+      if (!a.accept)
+        return {
+          ...s,
+          cosell: s.cosell.map((x) => (x.id === a.id ? { ...x, status: "declined", decidedBy: a.by, decidedAt: stamp(), declineReason: a.reason } : x)),
+          sellerFeed: item(s.sellerFeed, `${partner} declined your co-sell request on ${acct.name}: ${a.reason}`, `/v/account/${acct.id}`),
+        }
+      const owner = a.owner ?? a.by
+      const today = stamp().slice(0, 10)
+      const touch = { id: `t${Date.now()}`, at: stamp(), partnerId: r.partnerId, kind: "Co-sell", text: `Accepted ${SELLER}'s co-sell request as ${r.role} partner`, by: a.by }
+      const oppId = acct.oppId!
+      const exists = s.opportunities.some((o) => o.id === oppId)
+      const opportunities = exists
+        ? s.opportunities.map((o) => {
+            if (o.id !== oppId) return o
+            const lines = o.lines.some((l) => l.partnerId === r.partnerId) ? o.lines : modelSplit([...o.lines, { partnerId: r.partnerId, role: r.role }])
+            return { ...o, lines, touches: [...o.touches, touch] }
+          })
+        : [{ id: oppId, name: acct.oppName ?? acct.name, account: acct.name, value: acct.value, stage: acct.stage, closeDate: acct.closeDate, owner: SELLER,
+            lines: [{ partnerId: r.partnerId, role: r.role, share: 100 }], splitSource: "model" as const,
+            versions: [{ version: 1, at: stamp(), by: "Attribution agent", note: `${partner} joined through ${SELLER}'s co-sell request`, lines: [] }], touches: [touch] }, ...s.opportunities]
+      const partnerFeed = r.partnerId === "ridgeway"
+        ? feed(s, `You're working ${acct.name} with ${SELLER} (Brightline). The joint plan is ready`, "/p/leads/cosell", owner)
+        : r.partnerId === "northpeak"
+          ? feed(s, `${a.by} accepted a Grid analytics co-sell with ${SELLER} on ${acct.name}. You're likely to lead the design`, "/p/work", "Raj Mehta", "northpeak")
+          : s.partnerFeed
+      return {
+        ...s,
+        cosell: s.cosell.map((x) => (x.id === a.id ? { ...x, status: "accepted", decidedBy: a.by, decidedAt: stamp(), owner, plan: x.plan.length ? x.plan : defaultPlan(owner, partner, r.role, today, addDays) } : x)),
+        opportunities,
+        partnerFeed,
+        sellerFeed: item(s.sellerFeed, `${partner} accepted your co-sell request on ${acct.name}. ${owner} owns it`, `/v/account/${acct.id}`),
+        notices: notice(s, `${partner} joined a deal through co-sell`, `${acct.name} · ${r.role} · with ${SELLER}`, `/opportunity/${oppId}`),
+        activity: log(s, `${partner} accepted ${SELLER}'s co-sell request on ${acct.name} as ${r.role}`, `/opportunity/${oppId}`),
+      }
+    }
+    case "planToggle":
+      return { ...s, cosell: s.cosell.map((x) => (x.id === a.id ? { ...x, plan: x.plan.map((p) => (p.id === a.stepId ? { ...p, done: !p.done } : p)) } : x)) }
+    case "planAdd":
+      return { ...s, cosell: s.cosell.map((x) => (x.id === a.id ? { ...x, plan: [...x.plan, a.step] } : x)) }
+    case "sellerNote": {
+      const reg = s.registrations.find((r) => r.id === a.regId)!
+      return {
+        ...s,
+        sellerNotes: { ...s.sellerNotes, [a.regId]: [...(s.sellerNotes[a.regId] ?? []), { by: a.by, at: stamp(), text: a.text }] },
+        notices: notice(s, `${a.by} added context on ${reg.customer}`, `The Brightline seller on the account: "${a.text.length > 90 ? `${a.text.slice(0, 90)}…` : a.text}"`, `/registration/${reg.id}`),
+        activity: log(s, `${a.by} (Brightline seller) added context on ${reg.customer}`, `/registration/${reg.id}`),
+        sellerFeed: item(s.sellerFeed, `You told Jordan Lee what you know about ${reg.customer}`, `/v/accounts`),
+      }
+    }
+
+    /* ---------- CEO / CFO ---------- */
+    case "execDecide": {
+      const x = s.execApprovals.find((e) => e.id === a.id)!
+      const what = x.kind === "model" ? "attribution model version 3" : `${partnerName(s, x.partnerId ?? "")}'s ${money(x.amount ?? 0)} rebate`
+      return {
+        ...s,
+        execApprovals: s.execApprovals.map((e) => (e.id === a.id ? { ...e, status: a.approve ? "approved" : "declined", note: a.note, decidedAt: stamp() } : e)),
+        execFeed: item(s.execFeed, `You ${a.approve ? "approved" : "declined"} ${what}`, `/v/approval/${x.id}`),
+        chiefFeed: chiefLog(s, `${CFO} (CFO) ${a.approve ? "approved" : "declined"} ${what}${a.note ? `: "${a.note}"` : ""}`),
+      }
+    }
+    case "shareBoard":
+      return { ...s, execFeed: item(s.execFeed, "You shared the board view: verified figures only", "/v/board") }
+
     case "toggleAgent":
       return {
         ...s,
@@ -665,6 +866,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // The CRM write happens after the decision; its status is tracked separately (D5).
     if (a.type === "approve") setTimeout(() => raw({ type: "synced", id: a.id }), 1400)
     if (a.type === "partnerRegister" && a.reg.crm) setTimeout(() => raw({ type: "synced", id: a.reg.id }), 1400)
+    // Only Ridgeway has partner portals in this demo; other partners answer a co-sell request on their own a moment later.
+    if (a.type === "sendCoSell" && a.req.partnerId !== "ridgeway") setTimeout(() => raw({ type: "cosellRespond", id: a.req.id, accept: true, by: a.req.contact }), 2600)
   }, [])
   const value = useMemo<Store>(
     () => ({ state, dispatch, partner: (id) => state.partners.find((p) => p.id === id) }),

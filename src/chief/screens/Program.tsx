@@ -8,8 +8,8 @@ import { money, shortDate } from "@/lib/format"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
-import { agents, autonomyLevels, budget, programs, sharedRules, type ChangeRequest, type ProgramId, type RuleSet } from "@/chief/data"
-import { useRevenue } from "@/chief/useChief"
+import { agents, autonomyLevels, budget, sharedRules, type ChangeRequest, type ProgramId, type RuleSet } from "@/chief/data"
+import { useLivePrograms, useRevenue } from "@/chief/useChief"
 
 const scopeLabel = (r: ChangeRequest) => (r.programs === "all" ? "All programs" : r.programs.map((p) => `${p} program`).join(", "))
 const appliesTo = (r: ChangeRequest, p: ProgramId) => r.programs === "all" || r.programs.includes(p)
@@ -50,7 +50,7 @@ function Requests({ list }: { list: ChangeRequest[] }) {
     <ul className="space-y-3">
       {list.map((r) => (
         <li key={r.id} className="rounded-[12px] border p-4">
-          <div className="flex flex-wrap gap-2"><Badge variant="secondary">{r.kind === "rule" ? "Rule change" : "AI autonomy"}</Badge><Badge variant="outline">{scopeLabel(r)}</Badge></div>
+          <div className="flex flex-wrap gap-2"><Badge variant="secondary">{r.kind === "rule" ? (r.launch ? "New program" : "Rule change") : "AI autonomy"}</Badge><Badge variant="outline">{scopeLabel(r)}</Badge></div>
           <p className="mt-2 font-semibold text-foreground">{r.title}</p>
           <p className="text-[14px] text-muted-foreground">From {r.from} ({r.fromRole})</p>
           <Button size="sm" className="mt-3" onClick={() => go(`/c/approval/req-${r.id}`)}>Review <ArrowRight /></Button>
@@ -120,6 +120,7 @@ function Agents() {
 function Overview() {
   const { state } = useStore()
   const rev = useRevenue()
+  const programs = useLivePrograms()
   const roi = rev.won / budget.spent
   const pending = state.requests.filter((r) => r.status === "pending")
   return (
@@ -174,7 +175,7 @@ function Overview() {
 function ProgramView({ id }: { id: ProgramId }) {
   const { state } = useStore()
   const rev = useRevenue()
-  const p = programs.find((x) => x.id === id)!
+  const p = useLivePrograms().find((x) => x.id === id)!
   const rules = state.programRules[id]
   const members = rev.all.filter((x) => x.program === id)
   const won = members.reduce((n, x) => n + x.won, 0)
@@ -205,7 +206,7 @@ function ProgramView({ id }: { id: ProgramId }) {
       </Panel>
 
       {!p.live && (
-        <Panel><EmptyState icon={<Layers className="size-6" />} title="Not launched yet" body="RevOps can create it from the Marketplace template. You approve its rules before any partner can join. Below are the template's starting rules." /></Panel>
+        <Panel><EmptyState icon={<Layers className="size-6" />} title="Not launched yet" body={pending.some((r) => r.launch) ? "Ana Costa (RevOps) set it up from the Marketplace template. It goes live when you approve its rules. Below are the template's starting rules." : "RevOps can create it from the Marketplace template. You approve its rules before any partner can join. Below are the template's starting rules."} /></Panel>
       )}
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -249,6 +250,7 @@ function ProgramView({ id }: { id: ProgramId }) {
 export function ChiefProgram({ id }: { id?: string }) {
   const { state } = useStore()
   const rev = useRevenue()
+  const programs = useLivePrograms()
   const current = programs.find((p) => p.id === id)?.id
   // Tab badges count only changes aimed at that program; all-program AI changes show on "All programs".
   const waiting = (p: ProgramId) => state.requests.filter((r) => r.status === "pending" && r.programs !== "all" && r.programs.includes(p)).length

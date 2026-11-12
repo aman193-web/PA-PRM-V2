@@ -23,6 +23,8 @@ import { Welcome, type DemoRole } from "@/screens/Welcome"
 import { PartnerLogin } from "@/partner/PartnerLogin"
 import { PartnerApp } from "@/partner/PartnerApp"
 import { ChiefApp } from "@/chief/ChiefApp"
+import { VendorApp } from "@/vendor/VendorApp"
+import type { VendorRoleId } from "@/vendor/data"
 
 function Routes({ onSignOut }: { onSignOut: () => void }) {
   const { parts } = useRoute()
@@ -78,7 +80,13 @@ function Routes({ onSignOut }: { onSignOut: () => void }) {
   )
 }
 
-const roleSlug: Record<DemoRole, string> = { pam: "partner-manager", chief: "channel-chief", pexec: "partner-executive", rep: "partner-sales-rep", mkt: "partner-marketer", tech: "partner-technical-lead" }
+const roleSlug: Record<DemoRole, string> = {
+  pam: "partner-manager", chief: "channel-chief", revops: "revops", ae: "field-seller", ceo: "cfo",
+  pexec: "partner-executive", rep: "partner-sales-rep", mkt: "partner-marketer", tech: "partner-technical-lead",
+}
+
+/** RevOps, the field seller and the CFO share one Brightline app under #/v/. */
+const isVendor = (r: DemoRole | null): r is VendorRoleId => r === "revops" || r === "ae" || r === "ceo"
 
 export default function App() {
   // Demo data lives only in memory, and so does the sign-in: a page refresh is a clean start on the welcome page.
@@ -91,6 +99,7 @@ export default function App() {
     else if (!role) { if (path !== "/welcome" && !path.startsWith("/signin/")) go("/welcome") }
     else if (role === "pam") { if (path === "/" || path === "/welcome" || path.startsWith("/signin/") || path.startsWith("/p/") || path.startsWith("/c/")) go("/home") }
     else if (role === "chief") { if (!path.startsWith("/c/")) go("/c/home") }
+    else if (isVendor(role)) { if (!path.startsWith("/v/")) go("/v/home") }
     else if (!path.startsWith("/p/")) go("/p/home")
   }, [role, path])
 
@@ -105,7 +114,7 @@ export default function App() {
 
   const signIn = (r: DemoRole, to?: string) => {
     setRole(r)
-    go(to ?? (r === "pam" ? "/home" : r === "chief" ? "/c/home" : "/p/home"))
+    go(to ?? (r === "pam" ? "/home" : r === "chief" ? "/c/home" : isVendor(r) ? "/v/home" : "/p/home"))
   }
   const signOut = () => {
     setRole(null)
@@ -116,13 +125,16 @@ export default function App() {
   if (!role) {
     const who = parts[0] === "signin" ? (parts[1] as DemoRole) : null
     if (who === "pam") screen = <Login onSignIn={(to) => signIn("pam", to)} onBack={() => go("/welcome")} />
-    else if (who === "chief") screen = <Login variant="chief" onSignIn={() => signIn("chief")} onBack={() => go("/welcome")} />
+    else if (who === "chief") screen = <Login key="chief" variant="chief" onSignIn={() => signIn("chief")} onBack={() => go("/welcome")} />
+    else if (isVendor(who)) screen = <Login key={who} variant={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
     else if (who === "pexec" || who === "rep" || who === "mkt" || who === "tech") screen = <PartnerLogin role={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
     else screen = <Welcome onPick={(r) => signIn(r)} />
   } else if (role === "pam") {
     screen = <Routes onSignOut={signOut} />
   } else if (role === "chief") {
     screen = <ChiefApp onSignOut={signOut} />
+  } else if (isVendor(role)) {
+    screen = <VendorApp role={role} onSignOut={signOut} />
   } else {
     screen = <PartnerApp role={role} onSignOut={signOut} />
   }

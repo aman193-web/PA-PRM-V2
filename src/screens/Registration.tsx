@@ -91,6 +91,14 @@ export function RegistrationScreen({ id }: { id: string }) {
 
           {reg.conflict && <ConflictCompare reg={reg} />}
 
+          {(state.sellerNotes[reg.id] ?? []).map((n) => (
+            <div key={n.at} className="rounded-[14px] border border-primary/40 bg-brand-soft/30 px-5 py-4">
+              <p className="font-semibold text-foreground">{n.by}, the Brightline seller on this account, added context {ago(n.at)}</p>
+              <p className="mt-1 text-[15.5px] text-foreground">"{n.text}"</p>
+              <p className="mt-1 text-[14px] text-muted-foreground">For your decision. Sellers can't approve or reject registrations.</p>
+            </div>
+          ))}
+
           <div className="grid gap-6 xl:grid-cols-2">
             {reg.checks.length > 0 && (
               <Panel title="Automatic checks" sub="Eligibility, onboarding, fields, product, territory, conflicts">

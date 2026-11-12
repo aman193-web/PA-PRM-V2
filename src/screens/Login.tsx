@@ -68,30 +68,68 @@ function CardStack() {
   )
 }
 
-/** The channel chief signs in through the same vendor login, with her own copy. */
-const chiefCopy = {
+interface Copy { title: string; sub: string; stats: string[][]; badge: string; line: string; points: string[]; email: string; preview: { head: string; rows: string[][] } }
+
+/** Other Brightline roles sign in through the same vendor login, each with its own copy. */
+const chiefCopy: Copy = {
   title: "Approve what matters. Prove what partners are worth.",
   sub: "Escalations, credit overrides and program rules in one inbox, with verified partner revenue ready for the board.",
   stats: [["1 inbox", "for every escalation and override"], ["Verified", "revenue, matched to closed-won"], ["From Slack", "approve straight from the alert"]],
   badge: "Channel chief workspace",
   line: "Sign in to approve escalations and see partner revenue.",
   points: ["Every partner and partner manager, in full", "Every approval logged and explained"],
+  email: "dana.ortiz@brightline.io",
+  preview: { head: "Waiting for your approval", rows: [["Kestrel Energy", "Escalated at 82% of its deadline"], ["Brookside Bank", "Credit split change from Jordan"], ["Tidewater Systems", "Application · wants Platinum"]] },
 }
 
-function ChiefPreview() {
+const copies: Record<"chief" | "revops" | "ae" | "ceo", Copy> = {
+  chief: chiefCopy,
+  revops: {
+    title: "Keep partner data clean and revenue reconciled.",
+    sub: "Failed Salesforce writes, uncertain matches and revenue mismatches in one queue, with the evidence side by side.",
+    stats: [["1 queue", "for every data exception"], ["Append-only", "revenue ledger, never edited"], ["Versioned", "rules, approved by the chief"]],
+    badge: "RevOps workspace",
+    line: "Sign in to clear exceptions and reconcile revenue.",
+    points: ["All pipeline and revenue, across every partner", "Every fix logged with your name"],
+    email: "ana.costa@brightline.io",
+    preview: { head: "Open exceptions", rows: [["Cedar Valley Schools", "Amounts differ · credit on hold"], ["Orion Labs", "Salesforce write retrying"], ["Acme Manufacturing", "Two records, one company?"]] },
+  },
+  ae: {
+    title: "The right partner on every deal.",
+    sub: "See what partners are doing on your accounts, and bring one in with a co-sell request in three taps.",
+    stats: [["3 taps", "to send a co-sell request"], ["Ranked", "partners, with the reasons"], ["Your accounts", "and nothing else"]],
+    badge: "Field seller workspace",
+    line: "Sign in to see partners on your accounts.",
+    points: ["Only your accounts and their partners", "The AI drafts; you always send"],
+    email: "sam.rivera@brightline.io",
+    preview: { head: "Partners on your accounts", rows: [["Acme Manufacturing", "Ridgeway registered · in review"], ["Solstice Hotels", "Ridgeway ranked first · 91% fit"], ["Brookside Bank", "Atlas · joint plan 2 of 4 done"]] },
+  },
+  ceo: {
+    title: "Know if the partner channel earns its budget.",
+    sub: "Verified partner revenue, return on the program and a board-ready view, with the approvals only the CFO can give.",
+    stats: [["Verified", "matched to closed-won"], ["1 slide", "ready for the board"], ["Weekly", "on your phone"]],
+    badge: "CEO and CFO workspace",
+    line: "Sign in to see partner revenue and approvals.",
+    points: ["Verified figures by default", "Past periods keep their attribution model"],
+    email: "morgan.hale@brightline.io",
+    preview: { head: "This week", rows: [["$3,820,000", "Verified partner revenue, 2026"], ["4.5x", "Return on the program budget"], ["2 approvals", "Model version 3 · Northpeak rebate"]] },
+  },
+}
+
+function RolePreview({ c }: { c: Copy }) {
   return (
     <div className="w-full max-w-[420px] rounded-[18px] border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm">
-      <span className="text-[13px] font-bold text-[#ffb359]">Waiting for your approval</span>
-      {[["Kestrel Energy", "Escalated at 82% of its deadline"], ["Brookside Bank", "Credit split change from Jordan"], ["Tidewater Systems", "Application · wants Platinum"]].map(([t, d]) => (
+      <span className="text-[13px] font-bold text-[#ffb359]">{c.preview.head}</span>
+      {c.preview.rows.map(([t, d]) => (
         <div key={t} className="mt-3 rounded-[12px] bg-white/[0.06] px-3.5 py-2.5"><b className="block text-[15.5px] text-white">{t}</b><span className="text-[13.5px] text-[#a9bfdc]">{d}</span></div>
       ))}
     </div>
   )
 }
 
-export function Login({ onSignIn, onBack, variant = "pam" }: { onSignIn: (to?: string) => void; onBack?: () => void; variant?: "pam" | "chief" }) {
-  const c = variant === "chief" ? chiefCopy : null
-  const [email, setEmail] = useState(c ? "dana.ortiz@brightline.io" : me.email)
+export function Login({ onSignIn, onBack, variant = "pam" }: { onSignIn: (to?: string) => void; onBack?: () => void; variant?: "pam" | "chief" | "revops" | "ae" | "ceo" }) {
+  const c = variant === "pam" ? null : copies[variant]
+  const [email, setEmail] = useState(c ? c.email : me.email)
   const [busy, setBusy] = useState<string | null>(null)
 
   const start = (method: string, to?: string) => {
@@ -127,7 +165,7 @@ export function Login({ onSignIn, onBack, variant = "pam" }: { onSignIn: (to?: s
           </p>
         </div>
         <div className="relative hidden flex-1 items-center pt-2 pb-16 sm:flex sm:pr-8 xl:pr-12">
-          {c ? <ChiefPreview /> : <CardStack />}
+          {c ? <RolePreview c={c} /> : <CardStack />}
         </div>
         <div className="relative grid gap-3 sm:grid-cols-3">
           {(c ? c.stats : [

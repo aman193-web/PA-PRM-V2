@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { ArrowRight, Award, Briefcase, CircleHelp, Clock3, FileWarning, Inbox, Mail, MessageSquareText, Phone, Plus, ShieldCheck, Sparkles, TrendingUp } from "lucide-react"
+import { ArrowRight, Award, Briefcase, CircleHelp, Clock3, FileWarning, Handshake, Inbox, Mail, MessageSquareText, Phone, Plus, ShieldCheck, Sparkles, TrendingUp } from "lucide-react"
 import { Panel } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,8 @@ import { ruleLimit, type ProgramId } from "@/chief/data"
 import { daysUntil, leadLeft, usePartner, usePartnerData, usePartnerFeed } from "@/partner/usePartner"
 import { usePartnerAssistant } from "@/partner/Assistant"
 import { CompactDeals, DealRows, Kpi } from "@/partner/bits"
+import { useCoSellInbox } from "@/partner/screens/Leads"
+import { sellerAccounts } from "@/vendor/data"
 
 export interface Todo { key: string; icon: ReactNode; tone: "bad" | "amber" | "primary"; title: string; body: string; cta: string; href: string; tag: string }
 
@@ -19,11 +21,16 @@ function useTodos(): Todo[] {
   const { state } = useStore()
   const { isExec } = usePartner()
   const d = usePartnerData()
+  const cosell = useCoSellInbox()
   const out: Todo[] = []
   for (const r of d.needsReply)
     out.push({ key: r.id, icon: <CircleHelp />, tone: "bad", title: `Answer Jordan's question on ${r.customer}`, body: `"${r.infoRequest?.asked}"${isExec ? ` · ${r.rep}'s deal` : ""}`, cta: "Answer", href: `/p/deal/${r.id}`, tag: "Review paused" })
   for (const l of d.offers)
     out.push({ key: l.id, icon: <Inbox />, tone: "amber", title: `${isExec ? "Assign" : "Accept"} the ${l.company} lead`, body: `${l.industry} · ${l.region} · about ${money(l.estValue)}. ${isExec ? "Pick a rep or decline." : "Sent to you by name."}`, cta: "Review lead", href: "/p/leads", tag: `${hoursLeft(leadLeft(l)).replace(" left", "")} to accept` })
+  for (const c of cosell.waiting) {
+    const a = sellerAccounts.find((x) => x.id === c.accountId)!
+    out.push({ key: c.id, icon: <Handshake />, tone: "amber", title: `${c.from} wants to co-sell a ${a.industry.toLowerCase()} deal`, body: `${a.product} · about ${money(a.value)} · as ${c.role} partner. The account unlocks when you accept.`, cta: "Review", href: "/p/leads/cosell", tag: "Co-sell" })
+  }
   for (const r of d.expiring)
     out.push({ key: `x${r.id}`, icon: <Clock3 />, tone: "amber", title: `${r.customer} protection ends in ${daysUntil(r.protectedUntil!)} days`, body: `${r.crmStage ?? "Open"} in Brightline's CRM${isExec ? ` · ${r.rep}` : ""}. Ask for more time if it's still moving.`, cta: "Ask for time", href: `/p/deal/${r.id}`, tag: "Protection" })
   if (isExec)

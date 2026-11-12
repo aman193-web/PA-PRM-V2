@@ -6,7 +6,7 @@ import { useTheme } from "@/lib/theme"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
 
-export type DemoRole = "pam" | "chief" | "pexec" | "rep" | "mkt" | "tech"
+export type DemoRole = "pam" | "chief" | "revops" | "ae" | "ceo" | "pexec" | "rep" | "mkt" | "tech"
 
 interface RoleCard {
   id: DemoRole
@@ -24,13 +24,16 @@ const sides: { key: string; label: string; org: string; icon: typeof Building2; 
     roles: [
       { id: "pam", name: "Jordan Lee", initials: "JL", role: "Partner manager", org: "Brightline", job: "Decides held-back deals and looks after partners", tint: "bg-night text-white" },
       { id: "chief", name: "Dana Ortiz", initials: "DO", role: "Channel chief", org: "Brightline", job: "Approves escalations and owns partner revenue and budget", tint: "bg-[#f1ecfd] text-[#6d3fd1] dark:bg-[#2a2147] dark:text-[#c4b0ff]" },
+      { id: "revops", name: "Ana Costa", initials: "AC", role: "RevOps", org: "Brightline", job: "Fixes data exceptions and reconciles partner revenue", tint: "bg-[#e8f6fb] text-[#06779e] dark:bg-[#10303d] dark:text-[#7fd3f0]" },
+      { id: "ae", name: "Sam Rivera", initials: "SR", role: "Field seller", org: "Brightline", job: "Sees partners on their accounts and sends co-sell requests", tint: "bg-[#fdecef] text-[#b4234a] dark:bg-[#3a1520] dark:text-[#f5a3b8]" },
+      { id: "ceo", name: "Morgan Hale", initials: "MH", role: "CEO / CFO", org: "Brightline", job: "Checks the channel's return and approves the credit model", tint: "bg-[#eef2e3] text-[#4d6b1f] dark:bg-[#1f2a12] dark:text-[#b5d77a]" },
     ],
   },
   {
     key: "partner", label: "Partner side", org: "Ridgeway IT and Northpeak Consulting", icon: Store, showOrg: true,
     roles: [
       { id: "pexec", name: "Paul Okafor", initials: "PO", role: "Partner executive", org: "Ridgeway IT", job: "Sees revenue, assigns leads, manages the team", tint: "bg-amber-soft text-amber-ink" },
-      { id: "rep", name: "Marcus Bell", initials: "MB", role: "Partner sales rep", org: "Ridgeway IT", job: "Registers deals and sees his own credit", tint: "bg-brand-soft text-primary" },
+      { id: "rep", name: "Marcus Bell", initials: "MB", role: "Partner sales rep", org: "Ridgeway IT", job: "Registers deals and sees their own credit", tint: "bg-brand-soft text-primary" },
       { id: "mkt", name: "Priya Raman", initials: "PR", role: "Partner marketer", org: "Ridgeway IT", job: "Runs campaigns and requests marketing funds", tint: "bg-ok-soft text-ok" },
       { id: "tech", name: "Raj Mehta", initials: "RM", role: "Partner technical lead", org: "Northpeak Consulting", job: "Gets certified and logs delivery for credit", tint: "bg-secondary text-foreground" },
     ],
@@ -100,7 +103,7 @@ export function Welcome({ onPick }: { onPick: (r: DemoRole) => void }) {
         </div>
 
         <p className="mt-6 text-[14.5px] text-muted-foreground">
-          <b className="text-foreground">Try it:</b> register a deal over $50,000 as Marcus, then sign in as Jordan to find it in the review queue. Or hand a campaign lead to Marcus as Priya, and approve her funds request as Dana.
+          <b className="text-foreground">Try it:</b> register a deal over $50,000 as Marcus, then sign in as Jordan to find it in the review queue. Or send Ridgeway a co-sell request as Sam and accept it as Marcus, then fix the Cedar Valley mismatch as Ana.
           For the team only, not part of the product. Names are illustrative.
         </p>
       </main>

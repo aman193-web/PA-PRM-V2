@@ -9,7 +9,7 @@ export const sourceDocs: { id: DocId; rank: number; title: string; date: string;
   { id: "Arch", rank: 5, title: "Architecture review", date: "24 Oct 2026 · proposed", what: "ADRs, state machines, APIs, failure handling", use: "Data ownership and failure rules" },
   { id: "PA-PRD", rank: 6, title: "PartnerAssistant headless PRD", date: "20 Sep 2026", what: "Earlier, different framing (9 roles, 7-stage lifecycle)", use: "Shown as the earlier view" },
   { id: "Brief", rank: 6, title: "Partner-side MVP brief", date: "14 Oct 2026", what: "Earlier scoping brief for a coding tool", use: "Shown as the earlier view" },
-  { id: "Proto", rank: 7, title: "PRM prototype: six portals", date: "10 Nov 2026", what: "Our design: Partner manager, Channel chief, Partner executive, Partner sales rep, Partner marketer and Partner technical lead portals; values not in any document", use: "Assumptions and added standard practice" },
+  { id: "Proto", rank: 7, title: "PRM prototype: nine portals", date: "12 Nov 2026", what: "Our design: Partner manager, Channel chief, RevOps, Field seller, CEO / CFO, Partner executive, Partner sales rep, Partner marketer and Partner technical lead portals; values not in any document", use: "Assumptions and added standard practice" },
   { id: "Impartner", rank: 7, title: "Impartner demo and slides", date: "27–28 Oct 2026", what: "Competitor walkthrough and their partner-portal slides (application, home, journeys, leads, assets, training, analytics)", use: "Competitor reference for the partner portals" },
   { id: "TechDesign", rank: 1, title: "Technical Design", date: "Jen · 30 Sep 2026", what: "Cited by the deck and the Brief but not in any folder we have", use: "Marked \"cited, not seen\"" },
 ]
@@ -76,7 +76,7 @@ export const glossary: Item[] = [
   status: "specified" as const, sources: [{ doc: "BRD" as const }, { doc: "Deck" as const }], tags: ["what is", "meaning", "define"],
 }))
 
-/** The six portals built in the prototype, kept here so the hub tracks what's been designed. */
+/** The nine portals built in the prototype, kept here so the hub tracks what's been designed. */
 export const portals: { persona: string; role: string; person: string; org: string; stage: string; screens: string[]; added: string[] }[] = [
   { persona: "pam", role: "Partner manager", person: "Jordan Lee", org: "Brightline", stage: "1A",
     screens: ["Home", "Review queue (decide, extensions, waiting on partner)", "Deals & leads", "Partners, applications and onboarding", "Credit splits", "Salesforce sync", "Partner health (Stage 2)", "Three journeys"],
@@ -84,6 +84,15 @@ export const portals: { persona: string; role: string; person: string; org: stri
   { persona: "chief", role: "Channel chief", person: "Dana Ortiz", org: "Brightline", stage: "1A–1B",
     screens: ["Home", "Approvals (escalated deals, credit splits, second extensions, applications, rules and AI)", "Revenue by partner", "Partner managers", "Programs and rules (per program, versioned)", "Three journeys", "Your access"],
     added: ["Move partners between partner managers (G32)", "Rule changes scoped per program (G35)"] },
+  { persona: "revops", role: "RevOps", person: "Ana Costa", org: "Brightline", stage: "1A–1B",
+    screens: ["Home (reconciled revenue, sync health)", "Exceptions (failed writes, uncertain matches, mismatches, stale deals)", "Reconciliation and the revenue ledger", "Programs and rules (propose changes, launch from a template)", "Three journeys", "Your access"],
+    added: ["Partner managers' Tell RevOps flags show on the matching exception", "Corrections are ledger entries; shares still need the chief (R-CR-14)"] },
+  { persona: "ae", role: "Field seller", person: "Sam Rivera", org: "Brightline", stage: "1A · 2",
+    screens: ["Home (partner-involved deals)", "My accounts, with partner registrations, roles and touches", "Find a partner (ranked, drafted, sent by the seller)", "Co-sell requests and joint plans", "Three journeys", "Your access"],
+    added: ["Seller adds context to a registration on their account (G43)", "Accepting a co-sell adds the partner to the opportunity (R-CS-5)"] },
+  { persona: "ceo", role: "CEO / CFO", person: "Morgan Hale", org: "Brightline", stage: "1B",
+    screens: ["Home (verified revenue and return)", "Partner revenue, with unverified credit on a switch", "Board view (one slide, verified only)", "Approvals (attribution model versions, large rewards)", "Three journeys", "Your access"],
+    added: ["Rewards over $20,000 need the CFO (R-APR-8, G42)"] },
   { persona: "pexec", role: "Partner executive", person: "Paul Okafor", org: "Ridgeway IT", stage: "1B",
     screens: ["Home (verified revenue, tier progress)", "Deals (every Ridgeway deal)", "Leads (accept and assign)", "Revenue and credit", "Program, benefits and agreements", "Team", "Resources", "Three journeys", "Your access"],
     added: ["AI suggests which rep should own a lead (G33)"] },

@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { hoursLeft, money } from "@/lib/format"
 import { pipelineOf, slaPct, useQueue, useStore } from "@/store"
-import { otherManagers, otherPartners, type Manager } from "@/chief/data"
+import { otherManagers, otherPartners, programs, type Manager } from "@/chief/data"
 
 export type ApprovalKind = "deal" | "split" | "extension" | "application" | "rule" | "autonomy" | "funds"
 
@@ -41,7 +41,7 @@ export function useApprovals() {
       out.push({ id: `mdf-${m.id}`, kind: "funds", title: `${m.campaign} · ${name(m.companyId)}`, sub: claim ? `Claim with proof · ${m.claim!.results}` : `${m.activity} · expects ${m.expected}`, from: `${m.requestedBy} (${name(m.companyId)})`, at: claim ? m.claim!.at : m.submittedAt, tone: "primary", tag: claim ? "Claim" : "Funds request", value: claim ? m.claim!.amount : m.amount })
     }
     for (const r of state.requests.filter((x) => x.status === "pending"))
-      out.push({ id: `req-${r.id}`, kind: r.kind, title: r.title, sub: `${r.programs === "all" ? "All programs" : r.programs.map((p) => `${p} program`).join(", ")} · ${r.current} → ${r.proposed}`, from: `${r.from} (${r.fromRole})`, at: r.at, tone: "primary", tag: r.kind === "rule" ? "Rule change" : "Autonomy" })
+      out.push({ id: `req-${r.id}`, kind: r.kind, title: r.title, sub: `${r.programs === "all" ? "All programs" : r.programs.map((p) => `${p} program`).join(", ")} · ${r.current} → ${r.proposed}`, from: `${r.from} (${r.fromRole})`, at: r.at, tone: "primary", tag: r.kind === "rule" ? (r.launch ? "New program" : "Rule change") : "Autonomy" })
     const order = { bad: 0, amber: 1, primary: 2 }
     return out.sort((a, b) => order[a.tone] - order[b.tone])
   }, [state])
@@ -76,4 +76,10 @@ export function useRevenue() {
     })
     return { all, won, pipeline, managers: [jordan, ...others], top: all.slice(0, 5), fmt: money }
   }, [state, q])
+}
+
+/** Programs with their live state: seeded ones, plus any RevOps launched from a template and the chief approved. */
+export function useLivePrograms() {
+  const { state } = useStore()
+  return useMemo(() => programs.map((p) => ({ ...p, live: p.live || state.launched.includes(p.id) })), [state.launched])
 }

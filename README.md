@@ -1,11 +1,14 @@
-# PRM · six-portal prototype
+# PRM · nine-portal prototype
 
-A clickable prototype of the PRM with six portals, each showing only what that person may see and do:
+A clickable prototype of the PRM with nine portals, each showing only what that person may see and do:
 
 | Portal | Person | Routes | Spec |
 |---|---|---|---|
 | Partner manager | Jordan Lee (Brightline) | `#/home`, `#/queue` … | this README |
 | Channel chief | Dana Ortiz (Brightline) | `#/c/…` | [docs/Channel_Chief_Spec.md](docs/Channel_Chief_Spec.md) |
+| RevOps | Ana Costa (Brightline) | `#/v/…` | [docs/Brightline_Portals_Spec.md](docs/Brightline_Portals_Spec.md) §2 |
+| Field seller | Sam Rivera (Brightline) | `#/v/…` | [docs/Brightline_Portals_Spec.md](docs/Brightline_Portals_Spec.md) §3 |
+| CEO / CFO | Morgan Hale (Brightline) | `#/v/…` | [docs/Brightline_Portals_Spec.md](docs/Brightline_Portals_Spec.md) §4 |
 | Partner executive | Paul Okafor (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
 | Partner sales rep | Marcus Bell (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
 | Partner marketer | Priya Raman (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §8 |
@@ -64,4 +67,4 @@ There's a map of these journeys inside the app at **The three journeys** (sideba
 
 - A partner manager sees only the partners assigned to them in full. Other partners show by name only, and their commercial terms are hidden.
 - Registrations past 80% of the SLA alert the channel chief. Split overrides and escalated applications go to the channel chief too.
-- Co-sell (J-03) is Stage 2 and isn't designed here.
+- Co-sell (J-03) is Stage 2. It's designed in the field seller's portal, and partners answer it from their Leads page.

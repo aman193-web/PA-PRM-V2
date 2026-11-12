@@ -88,7 +88,8 @@ export const rulesSeed: Record<ProgramId, RuleSet> = {
   Services: base(2, 16, 16, "Review deadline set to 16 business hours for every services deal"),
   Referral: base(2, 8, 16, "Lead acceptance window set to 48 hours"),
   Technology: base(1, 8, 16, "Program launched from the Technology template"),
-  Marketplace: base(0, 8, 16, "Template only; not launched"),
+  // Marketplace template: lower limit and shorter protection, since marketplace deals close fast.
+  Marketplace: { ...base(0, 8, 16, "Template only; not launched"), autoApprove: 25_000, protectionDays: 60 },
 }
 
 /** Business hours a reviewer has to decide a deal of this size in this program. */
@@ -113,6 +114,10 @@ export interface ChangeRequest {
   guardrail?: string
   status: "pending" | "approved" | "declined"
   note?: string
+  /** The rule values that change. Without it, a rule change raises the top-partner limit (the seeded CR-21). */
+  patch?: Partial<Omit<RuleSet, "version" | "history">>
+  /** Launches a program from its template (RevOps creates, the chief approves). */
+  launch?: boolean
 }
 
 export const requestsSeed: ChangeRequest[] = [

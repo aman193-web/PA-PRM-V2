@@ -97,7 +97,7 @@ export function Approvals({ tab }: { tab?: string }) {
 
 /* ---------- one approval ---------- */
 
-function Decide({ children, ready, label, onSubmit, tone }: { children: ReactNode; ready: boolean; label: string; onSubmit: () => void; tone: "ok" | "bad" | "primary" | null }) {
+export function Decide({ children, ready, label, onSubmit, tone }: { children: ReactNode; ready: boolean; label: string; onSubmit: () => void; tone: "ok" | "bad" | "primary" | null }) {
   return (
     <Panel title="Your decision" className="xl:sticky xl:top-[92px]">
       <div className="grid gap-2.5" role="radiogroup">{children}</div>
@@ -116,7 +116,7 @@ function Done({ title, body }: { title: string; body: string }) {
   )
 }
 
-function AiCard({ headline, confidence, evidence, who = "Deal Desk agent" }: { headline: string; confidence: number; evidence: string[]; who?: string }) {
+export function AiCard({ headline, confidence, evidence, who = "Deal Desk agent" }: { headline: string; confidence: number; evidence: string[]; who?: string }) {
   return (
     <Panel className="border-primary/30 bg-brand-soft/25">
       <div className="flex flex-wrap items-center justify-between gap-2"><AiTag>{who}</AiTag><Confidence value={confidence} /></div>
@@ -126,7 +126,7 @@ function AiCard({ headline, confidence, evidence, who = "Deal Desk agent" }: { h
   )
 }
 
-function Facts({ rows }: { rows: [string, ReactNode][] }) {
+export function Facts({ rows }: { rows: [string, ReactNode][] }) {
   return (
     <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
       {rows.map(([k, v]) => <div key={k}><dt className="text-[14px] text-muted-foreground">{k}</dt><dd className="font-medium text-foreground">{v}</dd></div>)}
@@ -322,12 +322,12 @@ function RequestApproval({ id }: { id: string }) {
   if (!r || r.status !== "pending") return <Done title={r?.title ?? "Request"} body={r ? `You ${r.status} it.` : "We couldn't find it."} />
   const submit = () => {
     dispatch({ type: "chiefRequest", id: r.id, approve: choice === "approve", note: note.trim() || undefined })
-    toast.success(choice === "approve" ? "Change approved" : "Change declined", { description: choice === "approve" ? (r.kind === "autonomy" ? "The Deal Desk agent moves to A4 within its limits, in every program. You can pause it any time." : `New rules version for ${scope}. It applies to registrations from now on, whoever looks after the partner.`) : `${r.from} sees your reason.` })
+    toast.success(choice === "approve" ? "Change approved" : "Change declined", { description: choice === "approve" ? (r.kind === "autonomy" ? "The Deal Desk agent moves to A4 within its limits, in every program. You can pause it any time." : r.launch ? `${scope.replace("the ", "The ")} is live. Partners can be added to it now.` : `New rules version for ${scope}. It applies to registrations from now on, whoever looks after the partner.`) : `${r.from} sees your reason.` })
     go("/c/program")
   }
   return (
     <div>
-      <PageHeader back={{ label: "Approvals", href: "/c/approvals" }} title={r.title} sub={<>{r.kind === "rule" ? "Program rule change" : "AI autonomy change"} · from {r.from} ({r.fromRole}) · {ago(r.at)}</>} />
+      <PageHeader back={{ label: "Approvals", href: "/c/approvals" }} title={r.title} sub={<>{r.kind === "rule" ? (r.launch ? "New program from a template" : "Program rule change") : "AI autonomy change"} · from {r.from} ({r.fromRole}) · {ago(r.at)}</>} />
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <div className="space-y-6">
           <Panel title="Applies to" sub="Rules belong to a program, not to a partner manager">

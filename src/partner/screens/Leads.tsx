@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowRight, Building2, Check, CheckCircle2, Clock3, Inbox, Lock, MapPin, Megaphone, Send, Sparkles, Undo2, UserRound, X } from "lucide-react"
+import { ArrowRight, Building2, CalendarDays, Check, CheckCircle2, Clock3, Handshake, Inbox, Lock, MapPin, Megaphone, Send, Sparkles, Undo2, UserRound, X } from "lucide-react"
 import { toast } from "sonner"
 import { AddedTag, EmptyState, PageHeader, PageTabs, Panel, SourceTag } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Lead } from "@/data/model"
-import { ago, hoursLeft, money, shortDate } from "@/lib/format"
+import { NOW, ago, hoursLeft, money, shortDate } from "@/lib/format"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
@@ -17,6 +17,106 @@ import { leadLeft, suggestRep, usePartner, usePartnerData } from "@/partner/useP
 import { StageTag } from "@/partner/bits"
 import type { CampaignLead } from "@/partner/marketing"
 import { useTeamCampaignLeads } from "@/partner/useMarketing"
+import { sellerAccounts, type CoSellRequest } from "@/vendor/data"
+
+const cosellDecline = ["No capacity this quarter", "Not our industry", "Outside our territory", "We already work this account"]
+
+/** Co-sell requests from Brightline sellers: the executive sees all of the company's, a rep the ones sent to them by name. */
+export function useCoSellInbox() {
+  const { state } = useStore()
+  const { me, company, isExec } = usePartner()
+  const all = state.cosell.filter((c) => c.partnerId === company.id && (isExec || c.contact === me.name || c.owner === me.name))
+  return { all, waiting: all.filter((c) => c.status === "sent") }
+}
+
+/** A Brightline seller asks the partner to work an account together (J-03). No account detail until accepted (R-CS-4). */
+function CoSellCard({ c }: { c: CoSellRequest }) {
+  const { state, dispatch } = useStore()
+  const { me, company, isExec } = usePartner()
+  const a = sellerAccounts.find((x) => x.id === c.accountId)!
+  const reps = state.team.filter((m) => m.canRegister && m.status === "active")
+  const [owner, setOwner] = useState(c.contact)
+  const [declining, setDeclining] = useState(false)
+  const [reason, setReason] = useState(cosellDecline[0])
+  const open = c.status === "sent"
+  const left = Math.max(0, (new Date(c.respondBy).getTime() - NOW.getTime()) / 3_600_000)
+  return (
+    <li className="rounded-[14px] border bg-card p-4 shadow-[0_1px_2px_#172b4508] sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          {open
+            ? <b className="flex items-center gap-2 text-[18px] text-foreground"><Lock className="size-4 text-muted-foreground" /> {a.industry} account · {a.region}</b>
+            : <b className="block text-[18px] text-foreground">{a.name}</b>}
+          <span className="text-[14.5px] text-muted-foreground">From {c.from}, Brightline seller · as <b className="text-foreground">{c.role}</b> partner · about <b className="text-foreground">{money(a.value)}</b></span>
+        </div>
+        {open ? <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[14px] font-semibold", left < 12 ? "bg-bad-soft text-bad" : "bg-amber-soft text-amber-ink")}><Clock3 className="size-4" /> {hoursLeft(left)}</span>
+          : <Badge className={cn("border-0", c.status === "accepted" ? "bg-ok-soft text-ok" : "bg-secondary text-foreground")}>{c.status === "accepted" ? `Accepted · ${c.owner} owns it` : "Declined"}</Badge>}
+      </div>
+      <dl className="mt-3 grid gap-x-6 gap-y-2 text-[15px] sm:grid-cols-2">
+        <div className="flex items-center gap-2"><Building2 className="size-4 text-muted-foreground" /><dd>{a.industry} · {a.sizeBand}</dd></div>
+        <div className="flex items-center gap-2"><MapPin className="size-4 text-muted-foreground" /><dd>{open ? a.region : `${a.hq} · ${a.region}`}</dd></div>
+        <div className="flex items-center gap-2 sm:col-span-2"><Sparkles className="size-4 text-muted-foreground" /><dd>{a.product}</dd></div>
+      </dl>
+      <p className="mt-3 rounded-[10px] bg-muted/60 px-3.5 py-2.5 text-[15px] text-foreground">"{c.message}"</p>
+      {open && <p className="mt-2 text-[14px] text-muted-foreground">The account name and contacts unlock when you accept.</p>}
+      {c.status === "accepted" && (
+        <div className="mt-4 border-t pt-4">
+          <p className="mb-2 text-[14px] font-semibold text-muted-foreground">Joint plan with {c.from} · {c.plan.filter((p) => p.done).length} of {c.plan.length} done</p>
+          <ul className="space-y-2">
+            {c.plan.map((p) => (
+              <li key={p.id}>
+                <button type="button" onClick={() => dispatch({ type: "planToggle", id: c.id, stepId: p.id })} aria-pressed={p.done} className="flex w-full items-start gap-3 rounded-[12px] border px-3.5 py-2.5 text-left hover:bg-muted/40">
+                  <span className={cn("mt-0.5 grid size-5 shrink-0 place-items-center rounded-[6px] border-2", p.done ? "border-ok bg-ok text-white" : "border-border-strong")}>{p.done && <Check className="size-3.5" strokeWidth={3} />}</span>
+                  <span className="min-w-0 flex-1"><span className={cn("block text-[15px]", p.done ? "text-muted-foreground line-through" : "text-foreground")}>{p.text}</span><span className="flex flex-wrap gap-x-3 text-[13.5px] text-muted-foreground"><span className="inline-flex items-center gap-1"><UserRound className="size-3.5" /> {p.owner}</span><span className="inline-flex items-center gap-1"><CalendarDays className="size-3.5" /> {shortDate(p.due)}</span></span></span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-[14px] text-muted-foreground">{company.short} is on the Salesforce opportunity as {c.role} partner. Work you log there counts as evidence for credit.</p>
+        </div>
+      )}
+      {c.status === "declined" && <p className="mt-3 text-[14.5px] text-muted-foreground">Declined by {c.decidedBy}: {c.declineReason}</p>}
+      {open && (
+        <div className="mt-4 flex flex-wrap items-end gap-3 border-t pt-4">
+          {isExec && (
+            <div className="grid min-w-52 flex-1 gap-1.5 sm:flex-none">
+              <Label className="text-[14px]">Who owns it</Label>
+              <Select value={owner} onValueChange={setOwner}>
+                <SelectTrigger className="h-11 bg-card text-[15.5px]"><SelectValue /></SelectTrigger>
+                <SelectContent>{reps.map((m) => <SelectItem key={m.id} value={m.name}>{m.name}{m.name === me.name ? " (you)" : ""}{m.name === c.contact ? " · asked for" : ""}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          )}
+          <Button size="lg" onClick={() => {
+            const who = isExec ? owner : me.name
+            dispatch({ type: "cosellRespond", id: c.id, accept: true, by: me.name, owner: who })
+            toast.success(`You're working ${a.name} with ${c.from}`, { description: `The account is unlocked and the joint plan is ready. ${company.short} is added to the opportunity.` })
+          }}><Handshake /> {isExec ? "Accept and assign" : "Accept"}</Button>
+          <Button size="lg" variant="outline" onClick={() => setDeclining(true)}><X /> Decline</Button>
+        </div>
+      )}
+      <Dialog open={declining} onOpenChange={setDeclining}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Decline this co-sell request?</DialogTitle>
+            <DialogDescription>{c.from} sees your reason and can ask another partner.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2" role="radiogroup">
+            {cosellDecline.map((r) => (
+              <button key={r} role="radio" aria-checked={reason === r} onClick={() => setReason(r)} className={cn("flex h-12 items-center justify-between rounded-[12px] border-2 px-4 text-left text-[15.5px]", reason === r ? "border-primary bg-brand-soft/50 text-foreground" : "border-border text-foreground hover:border-border-strong")}>
+                {r} {reason === r && <Check className="size-4 text-primary" />}
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeclining(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => { dispatch({ type: "cosellRespond", id: c.id, accept: false, by: me.name, reason }); setDeclining(false); toast("Declined", { description: `${c.from} sees your reason.` }) }}>Decline request</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </li>
+  )
+}
 
 const declineReasons = ["No capacity this quarter", "Outside our territory", "Not a fit for our services", "We already know this customer"]
 
@@ -207,11 +307,12 @@ export function PartnerLeads({ tab }: { tab?: string }) {
   const { isExec } = usePartner()
   const d = usePartnerData()
   const fromMarketing = useTeamCampaignLeads()
+  const cosell = useCoSellInbox()
   const mktOpen = fromMarketing.filter((l) => l.status === "with_rep")
   const working = d.leads.filter((l) => l.status === "accepted")
   const withReps = isExec ? d.leads.filter((l) => l.status === "offered" && l.assignee) : []
   const done = d.leads.filter((l) => ["converted", "declined", "expired"].includes(l.status))
-  const t = tab ?? (d.offers.length ? "waiting" : "working")
+  const t = tab ?? (d.offers.length ? "waiting" : cosell.waiting.length ? "cosell" : "working")
   return (
     <div>
       <PageHeader
@@ -226,9 +327,13 @@ export function PartnerLeads({ tab }: { tab?: string }) {
           { value: "waiting", label: isExec ? "To accept" : "Waiting for you", icon: <Inbox />, count: d.offers.length + withReps.length, tone: d.offers.length ? "action" : "neutral" },
           { value: "working", label: "Working", icon: <Clock3 />, count: working.length },
           { value: "done", label: "Done", icon: <CheckCircle2 />, count: done.length },
+          { value: "cosell", label: "Co-sell", icon: <Handshake />, count: cosell.waiting.length || cosell.all.length, tone: cosell.waiting.length ? "action" : "neutral", hint: "Brightline sellers asking Ridgeway to work one of their accounts. You see no account detail until you accept." },
           { value: "marketing", label: "From Ridgeway marketing", icon: <Megaphone />, count: mktOpen.length, tone: !isExec && mktOpen.length ? "action" : "neutral", hint: "Leads from Ridgeway's own campaigns, handed over by the marketer. Ridgeway keeps them until a rep registers the deal." },
         ]}
       />
+      {t === "cosell" && (cosell.all.length ? <ul className="grid gap-4">{[...cosell.all].sort((a, b) => (a.status === "sent" ? -1 : b.status === "sent" ? 1 : 0)).map((c) => <CoSellCard key={c.id} c={c} />)}</ul> : (
+        <Panel><EmptyState icon={<Handshake className="size-6" />} title="No co-sell requests" body={isExec ? "When a Brightline seller asks Ridgeway to work an account together, it shows here." : "Co-sell requests sent to you by name show here."} /></Panel>
+      ))}
       {t === "marketing" && (fromMarketing.length ? <ul className="grid gap-4">{fromMarketing.map((l) => <MarketingCard key={l.id} l={l} />)}</ul> : (
         <Panel><EmptyState icon={<Megaphone className="size-6" />} title="Nothing from marketing" body={isExec ? "Leads Priya hands to your reps show here." : "Leads Priya hands you from her campaigns show here."} /></Panel>
       ))}

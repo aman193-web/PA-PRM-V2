@@ -21,6 +21,7 @@ import { useMarketing, useTeamCampaignLeads } from "@/partner/useMarketing"
 import { useDelivery } from "@/partner/useDelivery"
 import { useMktTodos } from "@/partner/screens/mkt/MktHome"
 import { useTechTodos } from "@/partner/screens/tech/TechHome"
+import { useCoSellInbox } from "@/partner/screens/Leads"
 
 interface NavItem { key: string; label: string; short?: string; href: string; icon: typeof Home; count?: number; mobile?: boolean }
 
@@ -30,6 +31,7 @@ function useNav(): NavItem[] {
   const m = useMarketing()
   const t = useDelivery()
   const fromMarketing = useTeamCampaignLeads().filter((l) => l.status === "with_rep").length
+  const cosell = useCoSellInbox().waiting.length
   const dealCount = d.needsReply.length + d.expiring.length
   if (isMkt)
     return [
@@ -51,7 +53,7 @@ function useNav(): NavItem[] {
     return [
       { key: "home", label: "Home", href: "/p/home", icon: Home, mobile: true },
       { key: "deals", label: "Deals", href: "/p/deals", icon: Briefcase, count: dealCount, mobile: true },
-      { key: "leads", label: "Leads", href: "/p/leads", icon: Inbox, count: d.offers.length, mobile: true },
+      { key: "leads", label: "Leads", href: "/p/leads", icon: Inbox, count: d.offers.length + cosell, mobile: true },
       { key: "credit", label: "Revenue", href: "/p/credit", icon: TrendingUp, mobile: true },
       { key: "program", label: "Program", href: "/p/program", icon: Award, mobile: true },
       { key: "team", label: "Team", href: "/p/team", icon: Users },
@@ -60,7 +62,7 @@ function useNav(): NavItem[] {
   return [
     { key: "home", label: "Home", href: "/p/home", icon: Home, mobile: true },
     { key: "deals", label: "My deals", short: "Deals", href: "/p/deals", icon: Briefcase, count: dealCount, mobile: true },
-    { key: "leads", label: "Leads", href: "/p/leads", icon: Inbox, count: d.offers.length + fromMarketing, mobile: true },
+    { key: "leads", label: "Leads", href: "/p/leads", icon: Inbox, count: d.offers.length + fromMarketing + cosell, mobile: true },
     { key: "credit", label: "My credit", short: "Credit", href: "/p/credit", icon: TrendingUp, mobile: true },
     { key: "resources", label: "Resources", href: "/p/resources", icon: BookOpen },
   ]
@@ -75,6 +77,7 @@ function useAlerts(): Alert[] {
   const d = usePartnerData()
   const mktTodos = useMktTodos()
   const techTodos = useTechTodos()
+  const cosell = useCoSellInbox().waiting
   return useMemo(() => {
     const out: Alert[] = []
     if (isMkt || isTech) {
@@ -85,13 +88,14 @@ function useAlerts(): Alert[] {
       return out
     }
     for (const r of d.needsReply) out.push({ id: `q-${r.id}`, title: `Jordan asked about ${r.customer}`, body: r.infoRequest?.asked ?? "Answer to resume the review", href: `/p/deal/${r.id}`, tone: "bad" })
+    for (const c of cosell) out.push({ id: `cs-${c.id}`, title: `Co-sell request from ${c.from}`, body: `Brightline seller · as ${c.role} partner · answer within 48 h`, href: "/p/leads/cosell", tone: "warn" })
     for (const l of d.offers) out.push({ id: `l-${l.id}`, title: `New lead: ${l.company}`, body: `From Brightline · accept within ${Math.max(1, Math.round(leadLeft(l)))} h`, href: "/p/leads", tone: "warn" })
     for (const r of d.expiring) out.push({ id: `e-${r.id}`, title: `${r.customer} protection ends in ${daysUntil(r.protectedUntil!)} days`, body: "Ask Jordan for more time in one tap", href: `/p/deal/${r.id}`, tone: "warn" })
     if (isExec) for (const g of state.agreements.filter((x) => x.status === "expiring")) out.push({ id: `g-${g.id}`, title: `${g.name} needs renewing`, body: g.detail, href: "/p/program", tone: "warn" })
     for (const r of d.deals.filter((x) => x.decision && x.decision.at >= "2026-10-26" && ["approved", "rejected"].includes(x.state)))
       out.push({ id: `d-${r.id}-${r.state}`, title: `${r.customer}: ${partnerStatus(r).label.toLowerCase()}`, body: r.state === "approved" ? `${money(r.value)} · protected for 90 days` : r.decision?.reason ?? "", href: `/p/deal/${r.id}`, tone: r.state === "approved" ? "ok" : "info" })
     return out
-  }, [d, state.agreements, state.mdf, isExec, isMkt, isTech, me, mktTodos, techTodos])
+  }, [d, state.agreements, state.mdf, isExec, isMkt, isTech, me, mktTodos, techTodos, cosell])
 }
 
 function Notifications() {
