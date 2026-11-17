@@ -64,11 +64,12 @@ function Agents() {
   const { state, dispatch } = useStore()
   return (
     <Panel title={<span className="flex items-center gap-2"><Cpu className="size-5 text-primary" /> AI agent autonomy</span>} sub="Agents work across every program. A0 observes … A4 acts alone within limits. Every action is logged and can be reversed.">
+      {state.agentLayerPaused && <p className="mb-4 flex gap-2 rounded-[12px] border border-bad/40 bg-bad-soft/40 px-4 py-3 text-[15px] text-foreground"><ShieldAlert className="mt-0.5 size-4 shrink-0 text-bad" /> Lee Park (AI supervisor) has paused every agent with the kill switch. Partner managers are deciding by hand.</p>}
       <ul className="grid gap-4 lg:grid-cols-2">
         {agents.map((a) => {
           const level = state.agentLevels[a.id]
           const idx = autonomyLevels.findIndex((l) => l.id === level)
-          const paused = state.pausedAgents.includes(a.id)
+          const paused = state.agentLayerPaused || state.pausedAgents.includes(a.id)
           return (
             <li key={a.id} className={cn("rounded-[12px] border p-4", paused && "border-amber/60 bg-amber-soft/30")}>
               <div className="flex items-start justify-between gap-3">
@@ -84,10 +85,10 @@ function Agents() {
                     </TooltipContent>
                   </Tooltip>
                   {paused && <Badge className="border-0 bg-amber-soft text-amber-ink">Paused</Badge>}</b><span className="text-[14px] text-muted-foreground">{a.job}</span></span>
-                <Button size="sm" variant={paused ? "default" : "ghost"} onClick={() => {
+                {!state.agentLayerPaused && <Button size="sm" variant={paused ? "default" : "ghost"} onClick={() => {
                   dispatch({ type: "toggleAgent", id: a.id })
                   toast(paused ? `${a.name} resumed` : `${a.name} paused`, { description: paused ? "It picks up from where it stopped." : "It stops acting now. Partner managers take over its work until you resume it." })
-                }}>{paused ? <><Play /> Resume</> : <><Pause /> Pause</>}</Button>
+                }}>{paused ? <><Play /> Resume</> : <><Pause /> Pause</>}</Button>}
               </div>
               <ol className={cn("mt-3 grid grid-cols-5 gap-1", paused && "opacity-50")}>
                 {autonomyLevels.map((l, i) => (

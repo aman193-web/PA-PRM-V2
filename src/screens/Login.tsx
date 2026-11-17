@@ -82,7 +82,7 @@ const chiefCopy: Copy = {
   preview: { head: "Waiting for your approval", rows: [["Kestrel Energy", "Escalated at 82% of its deadline"], ["Brookside Bank", "Credit split change from Jordan"], ["Tidewater Systems", "Application · wants Platinum"]] },
 }
 
-const copies: Record<"chief" | "revops" | "ae" | "ceo", Copy> = {
+const copies: Record<"chief" | "revops" | "ae" | "ceo" | "cro" | "it" | "aisup", Copy> = {
   chief: chiefCopy,
   revops: {
     title: "Keep partner data clean and revenue reconciled.",
@@ -114,6 +114,36 @@ const copies: Record<"chief" | "revops" | "ae" | "ceo", Copy> = {
     email: "morgan.hale@brightline.io",
     preview: { head: "This week", rows: [["$3,820,000", "Verified partner revenue, 2026"], ["4.5x", "Return on the program budget"], ["2 approvals", "Model version 3 · Northpeak rebate"]] },
   },
+  cro: {
+    title: "Hit the number with partner help.",
+    sub: "Partner pipeline by stage across every region, the deals at risk and the channel conflicts, with the person to ask about each.",
+    stats: [["Every region", "partner pipeline by stage"], ["At risk", "flagged before they slip"], ["Daily", "on your phone or laptop"]],
+    badge: "CRO workspace",
+    line: "Sign in to see partner pipeline and deals at risk.",
+    points: ["Every partner deal, by Salesforce stage", "Decisions stay with partner managers"],
+    email: "priya.shah@brightline.io",
+    preview: { head: "Today", rows: [["Kestrel Energy", "82% of its review deadline used"], ["Granite Labs", "Protection ends Nov 3"], ["Acme Manufacturing", "Ridgeway against Sam Rivera"]] },
+  },
+  it: {
+    title: "Connect Brightline's systems safely.",
+    sub: "Salesforce, Okta and the approval channels in one place, with AI-suggested field mappings you approve and an audit log of everything.",
+    stats: [["< 5 min", "Salesforce sync lag"], ["SCIM", "users from Okta, with MFA"], ["Append-only", "audit log of every action"]],
+    badge: "IT and CRM admin workspace",
+    line: "Sign in to manage connections, users and the audit log.",
+    points: ["Least-privilege Salesforce integration", "Nothing mapped until you approve it"],
+    email: "kai.brennan@brightline.io",
+    preview: { head: "Needs you", rows: [["3 field mappings", "Suggested by the Data Steward agent"], ["Microsoft Teams", "Dana Ortiz asked to connect it"], ["PRM-Field-Sellers-EMEA", "12 people with no role yet"]] },
+  },
+  aisup: {
+    title: "Keep the AI agents safe and useful.",
+    sub: "What each agent may do, per action, from A0 to A4. Every action with its evidence and cost, and a kill switch that works in seconds.",
+    stats: [["9 agents", "each action set A0 to A4"], ["1 click", "to pause one or all"], ["Every action", "logged with its evidence"]],
+    badge: "AI supervisor workspace",
+    line: "Sign in to supervise the agents.",
+    points: ["Money, access and export always need a person", "Raising autonomy needs the channel chief"],
+    email: "lee.park@brightline.io",
+    preview: { head: "Agents", rows: [["Deal Desk agent", "A3 · A4 waiting for Dana"], ["2 overrides", "Waiting for your review"], ["$1,151", "AI cost this month"]] },
+  },
 }
 
 function RolePreview({ c }: { c: Copy }) {
@@ -127,7 +157,7 @@ function RolePreview({ c }: { c: Copy }) {
   )
 }
 
-export function Login({ onSignIn, onBack, variant = "pam" }: { onSignIn: (to?: string) => void; onBack?: () => void; variant?: "pam" | "chief" | "revops" | "ae" | "ceo" }) {
+export function Login({ onSignIn, onBack, variant = "pam" }: { onSignIn: (to?: string) => void; onBack?: () => void; variant?: "pam" | "chief" | "revops" | "ae" | "ceo" | "cro" | "it" | "aisup" }) {
   const c = variant === "pam" ? null : copies[variant]
   const [email, setEmail] = useState(c ? c.email : me.email)
   const [busy, setBusy] = useState<string | null>(null)

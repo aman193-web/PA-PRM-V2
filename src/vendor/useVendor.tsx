@@ -1,14 +1,16 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react"
 import type { CreditLine, PartnerRole } from "@/data/model"
-import { NOW, addDays } from "@/lib/format"
-import { useStore, type State } from "@/store"
-import { budget } from "@/chief/data"
+import { NOW, addDays, money } from "@/lib/format"
+import { slaPct, useStore, type State } from "@/store"
+import { budget, otherPartners, type ChangeRequest } from "@/chief/data"
 import { useRevenue } from "@/chief/useChief"
 import { ladder, northpeakOthers } from "@/partner/delivery"
 import {
   candidatesSeed, companyRevenue, modelProposal, people, quarters, sellerAccounts, sourcedShare,
   type Candidate, type CoSellRequest, type SellerAccount, type VendorPerson, type VendorRoleId,
 } from "@/vendor/data"
+import { dealOwners, regionStageMix, stages, type Nudge, type Stage } from "@/vendor/sales"
+import { actionKey, agentRoster, costByMonth, monthlyBudget, type AgentAction, type AgentInfo } from "@/vendor/agents"
 
 const Ctx = createContext<VendorPerson | null>(null)
 
@@ -19,7 +21,7 @@ export function VendorProvider({ role, children }: { role: VendorRoleId; childre
 export function useVendor() {
   const me = useContext(Ctx)
   if (!me) throw new Error("useVendor outside VendorProvider")
-  return { me, isOps: me.role === "revops", isAe: me.role === "ae", isCeo: me.role === "ceo" }
+  return { me, isOps: me.role === "revops", isAe: me.role === "ae", isCeo: me.role === "ceo", isCro: me.role === "cro", isIt: me.role === "it", isAisup: me.role === "aisup" }
 }
 
 export const TODAY = NOW.toISOString().slice(0, 10)
@@ -172,4 +174,218 @@ export function useExec() {
       pending, model3: state.execApprovals.find((e) => e.id === "AM-3"),
     }
   }, [state, rev])
+}
+
+/* ---------------- CRO ---------------- */
+
+/** One open partner deal. Registered deals match the channel chief's pipeline; co-sell deals are ones Brightline's sellers brought a partner into. */
+export interface PipeDeal {
+  key: string
+  account: string
+  partners: string[]
+  /** The partner that registered it, or joined through co-sell. */
+  partnerId: string
+  value: number
+  stage: Stage
+  closeDate: string
+  owner?: string
+  regId?: string
+  oppId?: string
+  protectedUntil?: string
+  source: "registered" | "cosell"
+}
+
+export interface RiskFlag { kind: "deadline" | "protection" | "stale" | "partner"; label: string; detail: string; ai?: boolean }
+export interface AskOption { to: Nudge["to"]; name: string; why: string; text: string }
+export interface Risk {
+  key: string
+  account: string
+  value: number
+  stage: string
+  closeDate: string
+  partners: string[]
+  owner?: string
+  flags: RiskFlag[]
+  ask: AskOption[]
+  /** Someone is already on it (an extension request, RevOps asking the partner manager). */
+  underway?: string
+  nudges: Nudge[]
+}
+
+const inStages = (x?: string): x is Stage => !!x && (stages as readonly string[]).includes(x)
+const daysUntil = (iso: string) => Math.round((new Date(`${iso}T12:00:00`).getTime() - NOW.getTime()) / 86_400_000)
+const short = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+
+/** Partner pipeline by stage, deals at risk and channel conflicts, live from every portal. */
+export function useSales() {
+  const { state } = useStore()
+  const rev = useRevenue()
+  return useMemo(() => {
+    const open = state.registrations.filter((r) => r.state === "approved" || r.state === "under_review" || r.state === "info_requested")
+    const registered: PipeDeal[] = open.map((r) => {
+      const opp = state.opportunities.find((o) => o.account === r.customer && o.stage !== "Closed won")
+      const stage: Stage = r.state !== "approved" ? "In review" : inStages(opp?.stage) ? opp.stage : inStages(r.crmStage) ? r.crmStage : "Qualification"
+      return {
+        key: r.id, account: r.customer, partnerId: r.partnerId, value: r.value, stage, closeDate: r.closeDate, regId: r.id, oppId: opp?.id ?? r.crm?.opportunityId,
+        partners: opp ? opp.lines.map((l) => partnerNameOf(state, l.partnerId)) : [partnerNameOf(state, r.partnerId)],
+        owner: dealOwners[r.id] ?? opp?.owner, protectedUntil: r.protectedUntil, source: "registered" as const,
+      }
+    })
+    const cosellDeals: PipeDeal[] = state.cosell.filter((c) => c.status === "accepted").flatMap((c) => {
+      const a = sellerAccounts.find((x) => x.id === c.accountId)
+      if (!a?.oppId || open.some((r) => r.customer === a.name)) return []
+      const opp = state.opportunities.find((o) => o.id === a.oppId)
+      return [{
+        key: `cs-${c.id}`, account: a.name, partnerId: c.partnerId, value: a.value, stage: inStages(a.stage) ? a.stage : "Discovery", closeDate: a.closeDate, owner: "Sam Rivera", oppId: a.oppId,
+        partners: opp ? opp.lines.map((l) => partnerNameOf(state, l.partnerId)) : [partnerNameOf(state, c.partnerId)], source: "cosell" as const,
+      }]
+    })
+    const deals = [...registered, ...cosellDeals].sort((a, b) => b.value - a.value)
+    const sum = (l: { value: number }[]) => l.reduce((n, d) => n + d.value, 0)
+    const regions = [
+      { region: "North America", manager: "Jordan Lee", value: sum(deals), live: true },
+      { region: "EMEA", manager: "Rui Costa", value: otherPartners.filter((p) => p.manager === "Rui Costa").reduce((n, p) => n + p.pipeline, 0), live: false },
+      { region: "APAC", manager: "Mei Tan", value: otherPartners.filter((p) => p.manager === "Mei Tan").reduce((n, p) => n + p.pipeline, 0), live: false },
+    ]
+    const other = regions[1].value + regions[2].value
+    const byStage = stages.map((st) => {
+      const na = sum(deals.filter((d) => d.stage === st))
+      const rest = Math.round(other * regionStageMix[st])
+      return { stage: st, na, other: rest, total: na + rest, count: deals.filter((d) => d.stage === st).length }
+    })
+    const total = sum(deals) + other
+    const closingQ4 = deals.filter((d) => d.closeDate <= "2026-12-31" && d.stage !== "In review")
+    const byPartner = [
+      ...rev.all.filter((p) => p.live).map((p) => {
+        const mine = deals.filter((d) => d.partnerId === p.id)
+        return { id: p.id, name: p.name, tier: p.tier, program: p.program, region: "North America", manager: p.manager, deals: mine.length, pipeline: sum(mine), won: p.won, live: true }
+      }).filter((p) => p.pipeline > 0),
+      ...otherPartners.map((p) => ({ id: p.id, name: p.name, tier: p.tier, program: p.program, region: p.region, manager: p.manager, deals: undefined as number | undefined, pipeline: p.pipeline, won: p.won, live: false })),
+    ].sort((a, b) => b.pipeline - a.pipeline)
+
+    /* Deals at risk: rule-based flags now (Stage 1B); AI flags such as a missing partner are a Stage 2 preview. */
+    const risks: Risk[] = []
+    const add = (r: Omit<Risk, "nudges">) => {
+      const at = risks.find((x) => x.key === r.key)
+      if (at) { at.flags.push(...r.flags); for (const o of r.ask) if (!at.ask.some((x) => x.name === o.name)) at.ask.push(o); at.underway ??= r.underway }
+      else risks.push({ ...r, nudges: [] })
+    }
+    for (const r of open) {
+      const d = registered.find((x) => x.key === r.id)!
+      const base = { key: r.id, account: r.customer, value: r.value, stage: d.stage, closeDate: r.closeDate, partners: d.partners, owner: d.owner }
+      const partner = partnerNameOf(state, r.partnerId)
+      if (r.state === "under_review" && slaPct(r) >= 80)
+        add({ ...base, flags: [{ kind: "deadline", label: `${slaPct(r)}% of the review deadline used`, detail: `${partner} is waiting for a decision. The SLA agent alerted the channel chief at 80% (R-SLA-3).` }],
+          ask: [
+            { to: "pam", name: "Jordan Lee", why: "Is reviewing it", text: `${r.customer} (${money(r.value)}) is past ${slaPct(r)}% of its review deadline. Can you decide it today?` },
+            { to: "chief", name: "Dana Ortiz", why: "Was alerted at 80% and can decide it", text: `${r.customer} (${money(r.value)}) is about to breach its review deadline. It's a ${money(r.value)} deal for ${partner}.` },
+          ] })
+      if (r.state === "approved" && r.protectedUntil && daysUntil(r.protectedUntil) <= 14 && r.protectedUntil < r.closeDate) {
+        const ext = state.extensions.filter((e) => e.registrationId === r.id).at(-1)
+        if (ext?.status === "granted") continue
+        const second = !!ext && ext.previousExtensions > 0
+        add({ ...base,
+          flags: [{ kind: "protection", label: `Protection ends ${short(r.protectedUntil)}, before the ${short(r.closeDate)} close`, detail: `${partner} could lose protection with the deal still open.${ext?.status === "denied" ? " The extension was declined." : ""}` }],
+          underway: ext?.status === "pending" ? `${partner} asked for ${ext.requestedDays} more days. ${second ? "It's a second extension, so Dana Ortiz decides" : "Jordan Lee decides"}` : undefined,
+          ask: [
+            second
+              ? { to: "chief", name: "Dana Ortiz", why: "Decides second extensions", text: `${r.customer} loses protection on ${short(r.protectedUntil)}. Can you decide ${partner}'s second extension?` }
+              : { to: "pam", name: "Jordan Lee", why: ext?.status === "pending" ? "Decides the extension" : "Looks after the partner", text: `${r.customer} (${money(r.value)}) loses protection on ${short(r.protectedUntil)}, before its ${short(r.closeDate)} close. ${ext?.status === "pending" ? `Can you decide ${partner}'s extension?` : `Is ${partner} still on it?`}` },
+            ...(d.owner ? [{ to: "seller" as const, name: d.owner, why: "Owns the Salesforce opportunity", text: `${r.customer}: is the ${short(r.closeDate)} close date still right? ${partner}'s protection ends ${short(r.protectedUntil)}.` }] : []),
+          ] })
+      }
+    }
+    for (const x of state.exceptions.filter((e) => e.kind === "stale" && e.status !== "resolved" && e.regId)) {
+      const r = open.find((y) => y.id === x.regId)
+      if (!r) continue
+      const d = registered.find((y) => y.key === r.id)!
+      add({ key: r.id, account: r.customer, value: r.value, stage: d.stage, closeDate: r.closeDate, partners: d.partners, owner: d.owner,
+        flags: [{ kind: "stale", label: "No Salesforce activity for 52 days", detail: "Flagged by the Data Steward agent. Still in Qualification since June.", ai: true }],
+        underway: x.status === "waiting" ? `${x.resolution?.by ?? "RevOps"} asked Jordan Lee to check with ${partnerNameOf(state, r.partnerId)}` : undefined,
+        ask: [{ to: "pam", name: "Jordan Lee", why: "Looks after the partner", text: `${r.customer} has had no Salesforce activity for 52 days. Is ${partnerNameOf(state, r.partnerId)} still working it?` }] })
+    }
+    for (const a of sellerAccounts.filter((x) => x.need && !state.cosell.some((c) => c.accountId === x.id && c.status !== "declined")))
+      add({ key: `acct-${a.id}`, account: a.name, value: a.value, stage: a.stage, closeDate: a.closeDate, partners: [], owner: "Sam Rivera",
+        flags: [{ kind: "partner", label: `Needs ${/^[aeiou]/i.test(a.role ?? "") ? "an" : "a"} ${a.role?.toLowerCase()} partner and has none`, detail: a.need!, ai: true }],
+        ask: [{ to: "seller", name: "Sam Rivera", why: "Owns the deal and sends co-sell requests", text: `${a.name} (${money(a.value)}) still has no ${a.role?.toLowerCase()} partner. Can you bring one in this week?` }] })
+    for (const n of state.croNudges) risks.find((r) => r.key === n.key)?.nudges.push(n)
+    risks.sort((a, b) => b.value - a.value)
+    const settled = state.croNudges.filter((n) => !risks.some((r) => r.key === n.key))
+
+    /* Channel conflicts: a partner registration that overlaps a direct opportunity or another partner's registration. */
+    const conflicts = state.registrations.filter((r) => r.conflict && (r.state === "under_review" || r.state === "info_requested" || (r.decision && r.decision.at >= "2026-10-28"))).map((r) => ({
+      reg: r, kind: r.conflict!.kind === "crm_opportunity" ? ("direct" as const) : ("partner" as const), partner: partnerNameOf(state, r.partnerId), notes: state.sellerNotes[r.id] ?? [],
+    }))
+
+    return {
+      deals, registered: sum(registered), cosell: sum(cosellDeals), cosellDeals, other, total, regions, byStage, byPartner,
+      closingQ4, closingValue: sum(closingQ4), inReview: deals.filter((d) => d.stage === "In review"),
+      risks, riskValue: sum(risks), settled, conflicts, openConflicts: conflicts.filter((c) => c.reg.state === "under_review" || c.reg.state === "info_requested"),
+      won: rev.won,
+    }
+  }, [state, rev])
+}
+
+/* ---------------- IT / CRM admin ---------------- */
+
+export interface ItTask { id: string; title: string; sub: string; href: string; kind: "mapping" | "connector" | "group" | "leaver" | "merge" }
+
+/** What needs the CRM admin: AI-suggested mappings, connector requests, new Okta groups, leavers and record merges. */
+export function useAdmin() {
+  const { state } = useStore()
+  return useMemo(() => {
+    const pendingMappings = state.mappings.filter((m) => m.status === "pending")
+    const requested = state.connections.filter((c) => c.status === "requested")
+    const newGroups = state.groups.filter((g) => g.status === "new")
+    const leavers = state.staff.filter((u) => u.status === "leaving" && u.partners && !state.toldChief.includes(u.id))
+    const merge = state.exceptions.find((e) => e.kind === "match" && e.status === "resolved" && e.resolution?.choice === "same" && !state.merged.includes(e.id))
+    const retrying = state.crmWrites.filter((w) => w.status !== "synced")
+    const tasks: ItTask[] = [
+      ...(merge ? [{ id: `merge-${merge.id}`, title: "Merge ACME Mfg. Inc. into Acme Manufacturing", sub: `${merge.resolution?.by} confirmed they're the same company. Only you can merge records in Salesforce`, href: "/v/connections", kind: "merge" as const }] : []),
+      ...requested.map((c) => ({ id: c.id, title: `Connect ${c.name}?`, sub: `${c.request?.by} (${c.request?.byRole}) asked for it`, href: "/v/connections", kind: "connector" as const })),
+      ...pendingMappings.map((m) => ({ id: m.id, title: `${m.prm} → ${m.target.split(" (")[0]}`, sub: `Suggested by the ${m.by}${m.confidence ? ` · ${Math.round(m.confidence * 100)}% confident` : ""}${m.caution ? " · check the warning" : ""}`, href: "/v/mappings", kind: "mapping" as const })),
+      ...newGroups.map((g) => ({ id: g.id, title: `Give ${g.group} a PRM role`, sub: `${g.people} people pushed from Okta with no role, so they can't sign in yet`, href: "/v/users", kind: "group" as const })),
+      ...leavers.map((u) => ({ id: u.id, title: `${u.name} leaves on ${short(u.leavesOn!)}`, sub: `${u.partners} partners still assigned. Only the channel chief can move them`, href: "/v/users", kind: "leaver" as const })),
+    ]
+    const people = state.staff.filter((u) => u.status !== "deactivated").length
+    const provisioned = state.groups.filter((g) => g.status === "mapped").reduce((n, g) => n + g.people, 0)
+    return { tasks, pendingMappings, requested, newGroups, leavers, merge, retrying, writes: state.crmWrites, people, provisioned }
+  }, [state])
+}
+
+/* ---------------- AI supervisor ---------------- */
+
+export interface LiveAction extends AgentAction { key: string; now: string; paused: boolean; pending?: ChangeRequest }
+export interface LiveAgent extends Omit<AgentInfo, "actions"> { level: string; paused: boolean; pausedSelf: boolean; actions: LiveAction[]; pending: ChangeRequest[] }
+
+/** The nine agents with their live autonomy, pauses and pending requests, plus the agent audit and cost. */
+export function useAgents() {
+  const { state } = useStore()
+  return useMemo(() => {
+    const autonomy = state.requests.filter((r) => r.kind === "autonomy")
+    const roster: LiveAgent[] = agentRoster.map((a) => {
+      const pausedSelf = state.pausedAgents.includes(a.id)
+      const actions = a.actions.map((x) => {
+        const key = actionKey(a.id, x.id)
+        return { ...x, key, now: state.actionLevels[key] ?? x.level, paused: state.pausedActions.includes(key), pending: autonomy.find((r) => r.status === "pending" && (r.agent ?? "deal-desk") === a.id && (r.action ?? "decide") === x.id) }
+      })
+      return { ...a, level: state.agentLevels[a.id] ?? a.actions.find((x) => x.id === a.headline)!.level, paused: state.agentLayerPaused || pausedSelf, pausedSelf, actions, pending: actions.flatMap((x) => (x.pending ? [x.pending] : [])) }
+    })
+    const log = [...state.agentLog].sort((a, b) => b.at.localeCompare(a.at))
+    const overrides = log.filter((x) => x.outcome === "overridden" && !x.reviewed)
+    const waiting = log.filter((x) => x.outcome === "waiting")
+    const myRequests = state.requests.filter((r) => r.from === "Lee Park")
+    const pending = myRequests.filter((r) => r.status === "pending")
+    const decided = log.filter((x) => x.outcome === "agreed" || x.outcome === "overridden" || x.outcome === "edited")
+    const agreed = decided.filter((x) => x.outcome === "agreed").length
+    const month = costByMonth.at(-1)!.cost
+    const actions = agentRoster.reduce((n, a) => n + a.month.actions, 0)
+    const rated = agentRoster.filter((a) => a.id === "deal-desk" || a.id === "attribution")
+    const agreement = rated.reduce((n, a) => n + (a.month.rate ?? 0) * a.month.actions, 0) / rated.reduce((n, a) => n + a.month.actions, 0)
+    return {
+      roster, log, overrides, waiting, myRequests, pending, agreed, decided, actions, agreement,
+      running: roster.filter((a) => !a.paused).length, paused: state.agentLayerPaused, pausedCount: roster.filter((a) => a.paused).length + state.pausedActions.length,
+      month, budget: monthlyBudget, costByMonth,
+    }
+  }, [state])
 }

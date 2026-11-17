@@ -126,7 +126,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </span>
           </button>
           <ThemeSwitch />
-          <p className="px-1 text-[12.5px] text-night-muted">Updated 12 Nov 2026 from the BRD, planning deck, persona journeys, engineering docs, the Impartner demo and the nine prototype portals.</p>
+          <p className="px-1 text-[12.5px] text-night-muted">Updated 17 Nov 2026 from the BRD, planning deck, persona journeys, engineering docs, the Impartner demo and the twelve prototype portals.</p>
         </div>
       </aside>
 

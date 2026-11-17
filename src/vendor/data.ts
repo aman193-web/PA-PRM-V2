@@ -1,8 +1,11 @@
-// Demo data for three more Brightline (vendor) roles: RevOps (Ana Costa), the field seller (Sam Rivera)
-// and the CFO (Morgan Hale). Personas, permissions and rule IDs come from the PRM Knowledge Hub.
+// Demo data for six more Brightline (vendor) roles: RevOps (Ana Costa), the field seller (Sam Rivera),
+// the CFO (Morgan Hale), the CRO (Priya Shah), the IT / CRM admin (Kai Brennan) and the AI supervisor
+// (Lee Park). Personas, permissions and rule IDs come from the PRM Knowledge Hub. The last three roles
+// keep their own data in sales.ts, admin.ts and agents.ts.
 import { roleWeights, type PartnerRole } from "@/data/model"
 
-export type VendorRoleId = "revops" | "ae" | "ceo"
+export type VendorRoleId = "revops" | "ae" | "ceo" | "cro" | "it" | "aisup"
+export const vendorRoles: VendorRoleId[] = ["revops", "ae", "ceo", "cro", "it", "aisup"]
 
 export interface VendorPerson {
   role: VendorRoleId
@@ -20,6 +23,9 @@ export const people: Record<VendorRoleId, VendorPerson> = {
   revops: { role: "revops", name: "Ana Costa", first: "Ana", initials: "AC", title: "Partner operations lead", roleLabel: "RevOps", email: "ana.costa@brightline.io" },
   ae: { role: "ae", name: "Sam Rivera", first: "Sam", initials: "SR", title: "Account executive, enterprise", roleLabel: "Field seller", email: "sam.rivera@brightline.io" },
   ceo: { role: "ceo", name: "Morgan Hale", first: "Morgan", initials: "MH", title: "Chief financial officer", roleLabel: "CFO", email: "morgan.hale@brightline.io" },
+  cro: { role: "cro", name: "Priya Shah", first: "Priya", initials: "PS", title: "Chief revenue officer", roleLabel: "CRO", email: "priya.shah@brightline.io" },
+  it: { role: "it", name: "Kai Brennan", first: "Kai", initials: "KB", title: "CRM and systems administrator", roleLabel: "IT / CRM admin", email: "kai.brennan@brightline.io" },
+  aisup: { role: "aisup", name: "Lee Park", first: "Lee", initials: "LP", title: "AI operations lead", roleLabel: "AI supervisor", email: "lee.park@brightline.io" },
 }
 
 /* ================================================================== */
@@ -73,7 +79,7 @@ export const exceptionsSeed: DataException[] = [
   {
     id: "EX-42", kind: "mismatch", title: "Cedar Valley Schools: closed-won amount differs",
     detail: "Salesforce closed the deal at $42,000. Partner credit was calculated on the $45,000 Summit Resale registered, so both partners' credit is on hold until the amounts agree.",
-    found: "2026-10-03T07:00:00", source: "Reconciliation agent", issueId: "i2", oppId: "006Q8000016CdrV", regId: "REG-1688", partnerId: "summit", sfAmount: 42_000,
+    found: "2026-10-03T07:00:00", source: "Data Steward agent", issueId: "i2", oppId: "006Q8000016CdrV", regId: "REG-1688", partnerId: "summit", sfAmount: 42_000,
     compare: [
       { label: "Amount", ours: "$45,000 (registered)", theirs: "$42,000 (closed-won)" },
       { label: "Close date", ours: "Oct 2, 2026", theirs: "Oct 2, 2026", match: true },
@@ -98,7 +104,7 @@ export const exceptionsSeed: DataException[] = [
   {
     id: "EX-41", kind: "write", title: "Orion Labs: Atlas's partner role isn't in Salesforce yet",
     detail: "Jordan Lee approved Orion Labs for Atlas Integrators. Salesforce timed out when the platform added Atlas as Implementation partner on the opportunity. The write is queued and retried automatically, so nothing is lost.",
-    found: "2026-10-27T15:12:30", source: "Sync agent", issueId: "i1", regId: "REG-2035", partnerId: "atlas",
+    found: "2026-10-27T15:12:30", source: "Data Steward agent", issueId: "i1", regId: "REG-2035", partnerId: "atlas",
     compare: [
       { label: "Opportunity", ours: "006Q8000022OrnL", theirs: "006Q8000022OrnL", match: true },
       { label: "Partner role", ours: "Atlas Integrators · Implementation", theirs: "None yet" },
@@ -117,7 +123,7 @@ export const exceptionsSeed: DataException[] = [
   {
     id: "EX-43", kind: "match", title: "Two Salesforce accounts look like the same company",
     detail: "\"Acme Manufacturing\" and \"ACME Mfg. Inc.\" share a web domain and a billing address. Conflict checks only look at the first one, so a partner could register a deal someone is already working under the other name.",
-    found: "2026-10-28T06:30:00", source: "Sync agent",
+    found: "2026-10-28T06:30:00", source: "Data Steward agent",
     compare: [
       { label: "Name", ours: "Acme Manufacturing", theirs: "ACME Mfg. Inc." },
       { label: "Domain", ours: "acme-mfg.com", theirs: "acme-mfg.com", match: true },
@@ -139,7 +145,7 @@ export const exceptionsSeed: DataException[] = [
   {
     id: "EX-44", kind: "stale", title: "Orchid Foods has gone quiet in Salesforce",
     detail: "Summit Resale's approved deal has had no Salesforce activity for 52 days, it's still in Qualification, and its protection ends on Nov 1.",
-    found: "2026-10-28T06:30:00", source: "Sync agent", regId: "REG-1840", partnerId: "summit",
+    found: "2026-10-28T06:30:00", source: "Data Steward agent", regId: "REG-1840", partnerId: "summit",
     compare: [
       { label: "Last activity", ours: "Sep 6, 2026", theirs: "52 days ago" },
       { label: "Stage", ours: "Qualification", theirs: "Unchanged since Jun 2" },
@@ -158,7 +164,7 @@ export const exceptionsSeed: DataException[] = [
   {
     id: "EX-37", kind: "mismatch", title: "Pinecrest Utilities: close date differed by one day",
     detail: "Northpeak marked the deal won on Sep 22, at go-live; Salesforce closed it on Sep 25.",
-    found: "2026-09-25T07:00:00", source: "Reconciliation agent", oppId: "006Q8000015PncU", partnerId: "northpeak",
+    found: "2026-09-25T07:00:00", source: "Data Steward agent", oppId: "006Q8000015PncU", partnerId: "northpeak",
     ai: { headline: "Use the Salesforce date", confidence: 0.97, evidence: ["Dates within 2 days are settled automatically under the reconciliation rule."] },
     options: [],
     status: "resolved",
@@ -178,10 +184,10 @@ export interface LedgerEntry {
 }
 
 export const ledgerSeed: LedgerEntry[] = [
-  { id: "LE-207", at: "2026-10-09T18:00:00", account: "Pinnacle Health Network", oppId: "006Q8000017PnhN", text: "Closed-won matched to Salesforce: $96,000 · credit version 2 (override approved by Dana Ortiz)", amount: 96_000, by: "Reconciliation agent" },
-  { id: "LE-205", at: "2026-10-02T18:00:00", account: "Cedar Valley Schools", oppId: "006Q8000016CdrV", text: "Closed-won recorded at the registered $45,000 · held: Salesforce says $42,000", amount: 45_000, by: "Reconciliation agent" },
+  { id: "LE-207", at: "2026-10-09T18:00:00", account: "Pinnacle Health Network", oppId: "006Q8000017PnhN", text: "Closed-won matched to Salesforce: $96,000 · credit version 2 (override approved by Dana Ortiz)", amount: 96_000, by: "Automatic reconciliation" },
+  { id: "LE-205", at: "2026-10-02T18:00:00", account: "Cedar Valley Schools", oppId: "006Q8000016CdrV", text: "Closed-won recorded at the registered $45,000 · held: Salesforce says $42,000", amount: 45_000, by: "Automatic reconciliation" },
   { id: "LE-204", at: "2026-09-25T09:10:00", account: "Pinecrest Utilities", oppId: "006Q8000015PncU", text: "Closed-won matched to Salesforce: $150,000 · close date set to Sep 25", amount: 150_000, by: "Ana Costa" },
-  { id: "LE-203", at: "2026-09-18T18:00:00", account: "Lakeshore Hotels", text: "Closed-won matched to Salesforce: $124,000", amount: 124_000, by: "Reconciliation agent" },
+  { id: "LE-203", at: "2026-09-18T18:00:00", account: "Lakeshore Hotels", text: "Closed-won matched to Salesforce: $124,000", amount: 124_000, by: "Automatic reconciliation" },
 ]
 
 /** Rule fields RevOps can propose changes to. The channel chief approves (R-APR-2); nothing is edited in place. */
@@ -461,5 +467,47 @@ export const access: Record<VendorRoleId, { can: { text: string; stage: string }
     ],
     cannot: ["Register deals", "Change credit splits directly", "Configure programs or rules"],
     signIn: "Brightline SSO; usually the phone home screen, once a week.",
+  },
+  cro: {
+    can: [
+      { text: "See all partner pipeline and revenue, across every partner manager", stage: "1B" },
+      { text: "Export the views you can see", stage: "1B" },
+      { text: "Ask the person who can act on a deal at risk: the partner manager, the seller or the channel chief", stage: "Added" },
+      { text: "AI risk flags and a partner-against-direct forecast with a confidence band (PD-05, PD-06)", stage: "2" },
+    ],
+    cannot: ["Decide registrations or conflicts; the partner manager does", "Change credit", "Configure programs or rules"],
+    signIn: "Brightline SSO, on your phone and laptop.",
+  },
+  it: {
+    can: [
+      { text: "Review the security package", stage: "0" },
+      { text: "Set up SSO (SAML or OIDC) and SCIM provisioning", stage: "0" },
+      { text: "Install the Salesforce package and scope the integration user", stage: "0" },
+      { text: "Approve AI-suggested field mappings and new connectors", stage: "0" },
+      { text: "Manage Brightline users and roles", stage: "0" },
+      { text: "Read and export the audit log", stage: "0" },
+      { text: "Add connectors: HubSpot, Snowflake, Databricks", stage: "2" },
+    ],
+    cannot: [
+      "See or change program rules, credit or partner decisions beyond what support needs",
+      "Move partners between partner managers; the channel chief does (G32)",
+      "Change what AI agents may do; the AI supervisor does",
+    ],
+    signIn: "Brightline SSO with the admin role and MFA.",
+  },
+  aisup: {
+    can: [
+      { text: "Set each agent's autonomy, per action, from A0 to A4 within limits (R-AG-1)", stage: "0" },
+      { text: "Lower autonomy straight away; raising it goes to the channel chief", stage: "0" },
+      { text: "Pause any agent, any action or every agent at once (R-AG-3)", stage: "0" },
+      { text: "Review agent actions, overrides, evidence, confidence and cost (R-AG-5)", stage: "0" },
+      { text: "Track AI cost for Brightline", stage: "0" },
+    ],
+    cannot: [
+      "Raise autonomy for money, contracts, access, data export, tier demotion or partner termination (R-AG-2)",
+      "Raise autonomy without the channel chief's approval",
+      "Approve the business decisions agents raise",
+    ],
+    signIn: "Brightline SSO.",
   },
 }

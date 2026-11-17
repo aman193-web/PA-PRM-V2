@@ -9,7 +9,7 @@ export const sourceDocs: { id: DocId; rank: number; title: string; date: string;
   { id: "Arch", rank: 5, title: "Architecture review", date: "24 Oct 2026 · proposed", what: "ADRs, state machines, APIs, failure handling", use: "Data ownership and failure rules" },
   { id: "PA-PRD", rank: 6, title: "PartnerAssistant headless PRD", date: "20 Sep 2026", what: "Earlier, different framing (9 roles, 7-stage lifecycle)", use: "Shown as the earlier view" },
   { id: "Brief", rank: 6, title: "Partner-side MVP brief", date: "14 Oct 2026", what: "Earlier scoping brief for a coding tool", use: "Shown as the earlier view" },
-  { id: "Proto", rank: 7, title: "PRM prototype: nine portals", date: "12 Nov 2026", what: "Our design: Partner manager, Channel chief, RevOps, Field seller, CEO / CFO, Partner executive, Partner sales rep, Partner marketer and Partner technical lead portals; values not in any document", use: "Assumptions and added standard practice" },
+  { id: "Proto", rank: 7, title: "PRM prototype: twelve portals", date: "17 Nov 2026", what: "Our design: Partner manager, Channel chief, RevOps, Field seller, CEO / CFO, CRO, IT / CRM admin, AI supervisor, Partner executive, Partner sales rep, Partner marketer and Partner technical lead portals; values not in any document", use: "Assumptions and added standard practice" },
   { id: "Impartner", rank: 7, title: "Impartner demo and slides", date: "27–28 Oct 2026", what: "Competitor walkthrough and their partner-portal slides (application, home, journeys, leads, assets, training, analytics)", use: "Competitor reference for the partner portals" },
   { id: "TechDesign", rank: 1, title: "Technical Design", date: "Jen · 30 Sep 2026", what: "Cited by the deck and the Brief but not in any folder we have", use: "Marked \"cited, not seen\"" },
 ]
@@ -76,7 +76,7 @@ export const glossary: Item[] = [
   status: "specified" as const, sources: [{ doc: "BRD" as const }, { doc: "Deck" as const }], tags: ["what is", "meaning", "define"],
 }))
 
-/** The nine portals built in the prototype, kept here so the hub tracks what's been designed. */
+/** The twelve portals built in the prototype, one per persona, kept here so the hub tracks what's been designed. */
 export const portals: { persona: string; role: string; person: string; org: string; stage: string; screens: string[]; added: string[] }[] = [
   { persona: "pam", role: "Partner manager", person: "Jordan Lee", org: "Brightline", stage: "1A",
     screens: ["Home", "Review queue (decide, extensions, waiting on partner)", "Deals & leads", "Partners, applications and onboarding", "Credit splits", "Salesforce sync", "Partner health (Stage 2)", "Three journeys"],
@@ -93,6 +93,15 @@ export const portals: { persona: string; role: string; person: string; org: stri
   { persona: "ceo", role: "CEO / CFO", person: "Morgan Hale", org: "Brightline", stage: "1B",
     screens: ["Home (verified revenue and return)", "Partner revenue, with unverified credit on a switch", "Board view (one slide, verified only)", "Approvals (attribution model versions, large rewards)", "Three journeys", "Your access"],
     added: ["Rewards over $20,000 need the CFO (R-APR-8, G42)"] },
+  { persona: "cro", role: "CRO / VP Sales", person: "Priya Shah", org: "Brightline", stage: "1B · 2",
+    screens: ["Home (partner pipeline by stage, deals at risk)", "Pipeline (by stage, region and partner; export)", "Deals at risk, with who to ask", "Channel conflicts (partner against seller, partner against partner)", "Forecast with a confidence band (Stage 2 preview)", "Three journeys", "Your access"],
+    added: ["The CRO asks the partner manager, seller or chief about a deal at risk; never decides it (G45)", "Rule-based risk flags in Stage 1B (G46)"] },
+  { persona: "it", role: "IT / CRM admin", person: "Kai Brennan", org: "Brightline", stage: "0",
+    screens: ["Home (sync health, what needs an admin, security package)", "Connections (Salesforce, integration user scope, retries, record merges, connector requests)", "Field mappings (AI-suggested, approved by IT)", "Users and roles (Okta groups, SCIM, leavers)", "Audit log (every portal, append-only, export)", "Three journeys", "Your access"],
+    added: ["Connector requests from other roles, approved with their scopes shown (G48)", "A leaver's partners go to the channel chief (G32)"] },
+  { persona: "aisup", role: "AI supervisor", person: "Lee Park", org: "Brightline", stage: "0",
+    screens: ["Home (agents running, overrides, cost)", "Agents (the nine in the BRD) and the kill switch", "Agent detail: autonomy per action, pause, recent actions", "Agent activity (evidence, confidence, model, cost; overrides to review)", "AI cost by agent and month", "Three journeys", "Your access"],
+    added: ["Lowering autonomy takes effect at once; raising goes to the chief (R-AG-6, G47)", "A monthly AI cost budget (G49)"] },
   { persona: "pexec", role: "Partner executive", person: "Paul Okafor", org: "Ridgeway IT", stage: "1B",
     screens: ["Home (verified revenue, tier progress)", "Deals (every Ridgeway deal)", "Leads (accept and assign)", "Revenue and credit", "Program, benefits and agreements", "Team", "Resources", "Three journeys", "Your access"],
     added: ["AI suggests which rep should own a lead (G33)"] },

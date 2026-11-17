@@ -87,7 +87,7 @@ export function RegistrationScreen({ id }: { id: string }) {
             </div>
           )}
 
-          {reg.ai && open && <AiCard reg={reg} onUse={(c) => setSheet(c)} />}
+          {reg.ai && open && (dealDeskOff(state) ? <AiPaused /> : <AiCard reg={reg} onUse={(c) => setSheet(c)} />)}
 
           {reg.conflict && <ConflictCompare reg={reg} />}
 
@@ -177,6 +177,19 @@ export function RegistrationScreen({ id }: { id: string }) {
   )
 }
 
+/** The AI supervisor (or the channel chief) can pause the Deal Desk agent, one of its actions or every agent (R-AG-3). */
+const dealDeskOff = (s: ReturnType<typeof useStore>["state"]) => s.agentLayerPaused || s.pausedAgents.includes("deal-desk") || s.pausedActions.includes("deal-desk.recommend")
+
+function AiPaused() {
+  return (
+    <section className="rounded-[14px] border border-dashed px-5 py-4 sm:px-6">
+      <AiTag>Deal Desk recommendation</AiTag>
+      <p className="mt-1.5 text-[16px] font-semibold text-foreground">Paused by the AI supervisor</p>
+      <p className="mt-1 text-[15px] text-muted-foreground">The checks below still ran. Decide from them; the recommendation comes back when the agent is resumed.</p>
+    </section>
+  )
+}
+
 function AiCard({ reg, onUse }: { reg: Registration; onUse: (c: Choice) => void }) {
   const ai = reg.ai!
   const choice: Choice = ai.action === "approve" ? "approve" : ai.action === "reject" ? "reject" : "info"
@@ -242,7 +255,8 @@ function ConflictCompare({ reg }: { reg: Registration }) {
 }
 
 function DecisionForm({ reg, preset }: { reg: Registration; preset: Choice | null }) {
-  const { dispatch, partner } = useStore()
+  const { state, dispatch, partner } = useStore()
+  const ai = dealDeskOff(state) ? undefined : reg.ai
   const p = partner(reg.partnerId)!
   const [choice, setChoice] = useState<Choice | null>(preset)
   useEffect(() => { if (preset) setChoice(preset) }, [preset])
@@ -279,9 +293,9 @@ function DecisionForm({ reg, preset }: { reg: Registration; preset: Choice | nul
   return (
     <div id="decision" className="space-y-5">
       <div role="radiogroup" aria-label="Decision" className="grid gap-2">
-        <DecisionOption active={choice === "approve"} tone="ok" onClick={() => setChoice("approve")} icon={<Check />} label="Approve" sub="Links Salesforce and protects the deal" suggested={reg.ai?.action === "approve"} />
-        <DecisionOption active={choice === "info"} tone="amber" onClick={() => setChoice("info")} icon={<CircleHelp />} label="Ask for info" sub="Pauses the SLA until they reply" suggested={reg.ai?.action === "request_info"} />
-        <DecisionOption active={choice === "reject"} tone="bad" onClick={() => setChoice("reject")} icon={<X />} label="Reject" sub="Needs a reason code the partner sees" suggested={reg.ai?.action === "reject"} />
+        <DecisionOption active={choice === "approve"} tone="ok" onClick={() => setChoice("approve")} icon={<Check />} label="Approve" sub="Links Salesforce and protects the deal" suggested={ai?.action === "approve"} />
+        <DecisionOption active={choice === "info"} tone="amber" onClick={() => setChoice("info")} icon={<CircleHelp />} label="Ask for info" sub="Pauses the SLA until they reply" suggested={ai?.action === "request_info"} />
+        <DecisionOption active={choice === "reject"} tone="bad" onClick={() => setChoice("reject")} icon={<X />} label="Reject" sub="Needs a reason code the partner sees" suggested={ai?.action === "reject"} />
       </div>
 
       {choice === "approve" && (

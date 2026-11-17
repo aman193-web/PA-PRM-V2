@@ -118,6 +118,10 @@ export interface ChangeRequest {
   patch?: Partial<Omit<RuleSet, "version" | "history">>
   /** Launches a program from its template (RevOps creates, the chief approves). */
   launch?: boolean
+  /** For an autonomy change: which agent action, and the level asked for (the AI supervisor proposes). */
+  agent?: string
+  action?: string
+  level?: string
 }
 
 export const requestsSeed: ChangeRequest[] = [
@@ -130,7 +134,7 @@ export const requestsSeed: ChangeRequest[] = [
     status: "pending",
   },
   {
-    id: "CR-22", kind: "autonomy", title: "Let the Deal Desk agent approve clean deals under $25,000", programs: "all",
+    id: "CR-22", kind: "autonomy", title: "Let the Deal Desk agent approve clean deals under $25,000", programs: "all", agent: "deal-desk", action: "decide", level: "A4",
     from: "Lee Park", fromRole: "AI supervisor", at: "2026-10-26T11:30:00",
     current: "A3 · Acts with approval", proposed: "A4 · Acts alone within limits (under $25,000, no conflicts, partner quality ≥ 0.80)",
     why: "Over 90 days the agent's recommendation matched the partner manager's decision on 412 of 418 clean deals under $25,000 (98.6%).",

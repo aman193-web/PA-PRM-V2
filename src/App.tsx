@@ -24,7 +24,7 @@ import { PartnerLogin } from "@/partner/PartnerLogin"
 import { PartnerApp } from "@/partner/PartnerApp"
 import { ChiefApp } from "@/chief/ChiefApp"
 import { VendorApp } from "@/vendor/VendorApp"
-import type { VendorRoleId } from "@/vendor/data"
+import { vendorRoles, type VendorRoleId } from "@/vendor/data"
 
 function Routes({ onSignOut }: { onSignOut: () => void }) {
   const { parts } = useRoute()
@@ -81,12 +81,12 @@ function Routes({ onSignOut }: { onSignOut: () => void }) {
 }
 
 const roleSlug: Record<DemoRole, string> = {
-  pam: "partner-manager", chief: "channel-chief", revops: "revops", ae: "field-seller", ceo: "cfo",
+  pam: "partner-manager", chief: "channel-chief", revops: "revops", ae: "field-seller", ceo: "cfo", cro: "cro", it: "it-admin", aisup: "ai-supervisor",
   pexec: "partner-executive", rep: "partner-sales-rep", mkt: "partner-marketer", tech: "partner-technical-lead",
 }
 
-/** RevOps, the field seller and the CFO share one Brightline app under #/v/. */
-const isVendor = (r: DemoRole | null): r is VendorRoleId => r === "revops" || r === "ae" || r === "ceo"
+/** RevOps, the field seller, the CFO, the CRO, IT and the AI supervisor share one Brightline app under #/v/. */
+const isVendor = (r: DemoRole | null): r is VendorRoleId => !!r && (vendorRoles as string[]).includes(r)
 
 export default function App() {
   // Demo data lives only in memory, and so does the sign-in: a page refresh is a clean start on the welcome page.

@@ -8,7 +8,7 @@ export const opsJourneys: JourneysConfig = {
     {
       n: 1, title: "Clear what the agents couldn't settle", tag: "Data health · exceptions queue", stage: "Stage 1A",
       steps: [
-        { title: "Sees the open exceptions", detail: "Failed Salesforce writes, uncertain matches, revenue mismatches and stale deals, flagged by the sync and reconciliation agents.", href: "/v/exceptions", ids: "Persona" },
+        { title: "Sees the open exceptions", detail: "Failed Salesforce writes, uncertain matches, revenue mismatches and stale deals, flagged by the Data Steward agent.", href: "/v/exceptions", ids: "Persona" },
         { title: "Reads the evidence side by side", detail: "PRM against Salesforce, with the agent's advice and confidence.", href: "/v/exception/EX-43", ids: "Agent advice" },
         { title: "Fixes it, or hands it on", detail: "Retry a write, link two records, or ask the partner manager to check with the partner. Logged with Ana's name.", href: "/v/exception/EX-41", ids: "Persona", main: true },
         { title: "The partner manager sees it fixed", detail: "Jordan's Salesforce page loses the warning, and the deal shows as written.", href: "/v/exceptions/resolved", ids: "D5" },
@@ -33,7 +33,7 @@ export const opsJourneys: JourneysConfig = {
     },
   ],
   handoffs: [
-    ["From the sync and reconciliation agents", "Exceptions they couldn't settle"],
+    ["From the Data Steward agent", "Exceptions it couldn't settle"],
     ["From partner managers", "Salesforce problems flagged with Tell RevOps"],
     ["From the CRM admin", "Connected systems and field mappings"],
     ["To the channel chief", "Rule changes and new programs to approve"],
@@ -122,4 +122,126 @@ export const ceoJourneys: JourneysConfig = {
   canTitle: "What the CEO and CFO can and can't do",
   can: ["See all revenue and pipeline", "Export and share the board view", "Approve a new attribution model version (CFO)", "Approve large rewards (CFO)"],
   cannot: ["Register deals", "Change credit splits directly", "Configure programs"],
+}
+
+export const croJourneys: JourneysConfig = {
+  title: "CRO: three journeys",
+  journeys: [
+    {
+      n: 1, title: "See which partner deals will close", tag: "Partner pipeline", stage: "Stage 1B",
+      steps: [
+        { title: "Opens the daily view", detail: "Partner pipeline across every region, by Salesforce stage.", href: "/v/home", ids: "Persona", main: true },
+        { title: "Checks what closes this quarter", detail: "North America deal by deal; EMEA and APAC from their Salesforce totals.", href: "/v/pipeline", ids: "R-SEC-8" },
+        { title: "Compares partner and direct", detail: "A forecast with a confidence band.", href: "/v/pipeline", ids: "PD-05 · PD-06 · Stage 2" },
+        { title: "Exports the view", detail: "The deals behind the numbers, as a spreadsheet. Logged.", href: "/v/pipeline", ids: "Export · 1B" },
+      ],
+    },
+    {
+      n: 2, title: "Act on deals at risk", tag: "Deals at risk", stage: "Stage 1B",
+      steps: [
+        { title: "Opens the deals at risk", detail: "Review deadlines nearly breached, protection ending before the close, deals gone quiet, deals with no partner.", href: "/v/risk", ids: "R-SLA-3 · R-REG-10", main: true },
+        { title: "Asks the person who can act", detail: "The partner manager, the seller or the channel chief. Priya never decides the deal.", href: "/v/risk", ids: "Not in the documents", extra: true },
+        { title: "Sees it settle", detail: "When Jordan grants Granite Labs' extension or Sam brings a partner onto Solstice Hotels, the risk clears.", href: "/v/risk", ids: "Live from other portals" },
+      ],
+    },
+    {
+      n: 3, title: "Keep partners and sellers from colliding", tag: "Channel conflicts", stage: "Stage 1A",
+      steps: [
+        { title: "Sees an open conflict", detail: "Ridgeway registered Acme Manufacturing, which Sam Rivera is already working.", href: "/v/conflicts", ids: "R-REG-4", main: true },
+        { title: "Reads both sides", detail: "The registration, the Brightline opportunity, the Deal Desk's advice and the seller's context.", href: "/v/conflicts", ids: "G23 · G43" },
+        { title: "The partner manager decides", detail: "The outcome shows here as soon as Jordan decides.", href: "/v/conflicts", ids: "R-REG-5" },
+      ],
+    },
+  ],
+  handoffs: [
+    ["From partner managers", "Decisions on registrations and conflicts"],
+    ["From the channel chief", "Escalated deals and partner revenue"],
+    ["To partner managers, sellers and the channel chief", "Questions about deals at risk", true],
+  ],
+  canTitle: "What the CRO can and can't do",
+  can: ["See all partner pipeline and revenue", "Export the views they can see", "Ask the person who can act on a deal at risk (added)"],
+  cannot: ["Decide registrations or conflicts", "Change credit", "Configure programs"],
+  note: "From Stage 2, AI risk flags and the partner-against-direct forecast with a confidence band (PD-05, PD-06).",
+}
+
+export const itJourneys: JourneysConfig = {
+  title: "IT / CRM admin: three journeys",
+  journeys: [
+    {
+      n: 1, title: "Connect Salesforce safely", tag: "Stage 0 · foundation", stage: "Stage 0",
+      steps: [
+        { title: "Reviews the security package", detail: "SOC 2, the penetration test, the data agreement and how AI uses Brightline's data.", href: "/v/home", ids: "Persona" },
+        { title: "Installs the package and scopes the integration user", detail: "Least privilege: it can't delete records or change stage or amount.", href: "/v/connections", ids: "R-SEC-8", main: true },
+        { title: "Passes the sandbox test", detail: "Design-partner data syncs end to end: the Stage 0 exit gate.", href: "/v/connections", ids: "Stage 0 exit" },
+        { title: "Watches sync health", detail: "Lag under 5 minutes; failed writes are queued and retried, or retried by hand.", href: "/v/connections", ids: "R-SEC-7" },
+      ],
+    },
+    {
+      n: 2, title: "Approve what the AI suggests", tag: "Field mappings and connectors", stage: "Stage 0",
+      steps: [
+        { title: "Sees a suggested mapping", detail: "The Data Steward agent suggests; nothing is written until IT approves.", href: "/v/mappings", ids: "Persona", main: true },
+        { title: "Checks the samples and the risk", detail: "Writing partner campaigns into LeadSource would overwrite Marketing's values, so the agent offers a new field.", href: "/v/mappings", ids: "Agent advice" },
+        { title: "Approves a connector request", detail: "Dana Ortiz wants approvals in Microsoft Teams: it can send cards, not read chats.", href: "/v/connections", ids: "Persona" },
+        { title: "Merges records RevOps confirmed", detail: "Only the CRM admin merges in Salesforce. RevOps and the seller are told.", href: "/v/connections", ids: "Persona" },
+      ],
+    },
+    {
+      n: 3, title: "Keep access right", tag: "Users, roles and audit", stage: "Stage 0",
+      steps: [
+        { title: "Maps a new Okta group to a role", detail: "SCIM pushed 12 EMEA sellers; they sign in once the group has a role.", href: "/v/users", ids: "R-SEC-5", main: true },
+        { title: "Hands a leaver's partners to the chief", detail: "Okta signs the leaver out; only the channel chief moves their partners.", href: "/v/users", ids: "G32" },
+        { title: "Reads and exports the audit log", detail: "Every person, system and agent action, from every portal. Append-only.", href: "/v/audit", ids: "R-SEC-6" },
+      ],
+    },
+  ],
+  handoffs: [
+    ["From the channel chief", "Connector requests"],
+    ["From RevOps", "Records to merge in Salesforce"],
+    ["From Okta", "New users, groups and leavers"],
+    ["To RevOps", "Approved field mappings"],
+    ["To the channel chief", "Leavers whose partners need a new partner manager"],
+  ],
+  canTitle: "What the IT / CRM admin can and can't do",
+  can: ["Review the security package", "Set up SSO and SCIM", "Install the Salesforce package and scope the integration user", "Approve AI-suggested field mappings", "Manage users and roles", "Read and export the audit log"],
+  cannot: ["See or change program rules, credit or partner decisions beyond support", "Move partners between partner managers", "Change agent autonomy"],
+  note: "Stage 2 adds connectors for HubSpot, Snowflake and Databricks.",
+}
+
+export const aisupJourneys: JourneysConfig = {
+  title: "AI supervisor: three journeys",
+  journeys: [
+    {
+      n: 1, title: "Let an agent do more, safely", tag: "Autonomy A0–A4", stage: "Stage 0",
+      steps: [
+        { title: "Checks the agent's record", detail: "Deal Desk agent: 97.8% agreed with by partner managers over 30 days.", href: "/v/agent/deal-desk", ids: "R-AG-5" },
+        { title: "Asks to raise one action", detail: "Approve clean deals under $25,000 on its own: A3 to A4. Higher levels are locked for money, access and export.", href: "/v/agent/deal-desk", ids: "R-AG-1 · R-AG-2", main: true },
+        { title: "The channel chief approves", detail: "Dana Ortiz decides; Jordan Lee is told. Lowering never needs approval.", href: "/v/agent/deal-desk", ids: "R-AG-1" },
+      ],
+    },
+    {
+      n: 2, title: "Stop an agent in seconds", tag: "Kill switch", stage: "Stage 0",
+      steps: [
+        { title: "Pauses one action", detail: "For example the Program agent's funds checks, while the rest keeps running.", href: "/v/agent/program", ids: "R-AG-3" },
+        { title: "Pauses one agent", detail: "Its recommendations disappear from Jordan's registrations; Jordan is told.", href: "/v/agent/deal-desk", ids: "R-AG-3", main: true },
+        { title: "Or every agent at once", detail: "People do the agents' work by hand; the rules still approve clean deals.", href: "/v/agents", ids: "R-AG-3" },
+      ],
+    },
+    {
+      n: 3, title: "Review what agents did", tag: "Agent audit", stage: "Stage 0",
+      steps: [
+        { title: "Sees every action with its evidence", detail: "Model, prompt version, confidence and cost.", href: "/v/activity", ids: "R-AG-5", main: true },
+        { title: "Reviews overrides", detail: "When Jordan or Ana decides differently, it shows here as they decide.", href: "/v/activity/overrides", ids: "Live from other portals" },
+        { title: "Tracks AI cost", detail: "By agent and month, against the budget.", href: "/v/cost", ids: "Persona" },
+      ],
+    },
+  ],
+  handoffs: [
+    ["From every agent", "Actions, evidence and cost"],
+    ["From partner managers and RevOps", "Agreements and overrides, as they decide"],
+    ["To the channel chief", "Requests to raise autonomy"],
+    ["To IT", "Agent service access, which is never standing access"],
+  ],
+  canTitle: "What the AI supervisor can and can't do",
+  can: ["Set autonomy per agent and action, within limits", "Pause an action, an agent or every agent", "Review agent actions, overrides, evidence and cost", "Track AI cost"],
+  cannot: ["Raise autonomy for money, contracts, access, export, demotion or termination", "Raise autonomy without the channel chief", "Approve the business decisions agents raise"],
 }

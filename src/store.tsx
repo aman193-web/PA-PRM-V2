@@ -11,9 +11,17 @@ import { agents as agentSeed, requestsSeed, rulesSeed, type ChangeRequest, type 
 import { campaignLeadsSeed, campaignsSeed, mdfSeed, type Campaign, type CampaignLead, type MdfRequest } from "@/partner/marketing"
 import { engagementsSeed, skillsSeed, type Engagement, type Skill } from "@/partner/delivery"
 import {
-  cosellSeed, defaultPlan, exceptionsSeed, execApprovalsSeed, ledgerSeed, sellerAccounts,
+  candidatesSeed, cosellSeed, defaultPlan, exceptionsSeed, execApprovalsSeed, ledgerSeed, sellerAccounts,
   type CoSellRequest, type DataException, type ExecApproval, type LedgerEntry, type PlanStep,
 } from "@/vendor/data"
+import { croFeedSeed, type Nudge } from "@/vendor/sales"
+import {
+  auditSeed, connectionsSeed, groupsSeed, itFeedSeed, mappingsSeed, staffSeed,
+  type AuditEntry, type Connection, type FieldMapping, type GroupMap, type StaffUser,
+} from "@/vendor/admin"
+import {
+  actionKey, agentLogSeed, agentRoster, aisupFeedSeed, initialActionLevels, initialAgentLevels, type AgentLogEntry,
+} from "@/vendor/agents"
 
 /** Something that happened on the partner side. `rep` limits it to that person (and their company's admin). Ridgeway unless `companyId` says otherwise. */
 export interface PartnerFeedItem { id: string; at: string; text: string; href?: string; rep?: string; companyId?: string }
@@ -67,6 +75,29 @@ export interface State {
   /* CEO / CFO */
   execApprovals: ExecApproval[]
   execFeed: ActivityItem[]
+  /* CRO */
+  croNudges: Nudge[]
+  croFeed: ActivityItem[]
+  /* IT / CRM admin */
+  connections: Connection[]
+  mappings: FieldMapping[]
+  groups: GroupMap[]
+  staff: StaffUser[]
+  /** Leavers IT has told the channel chief about (their partners need a new partner manager). */
+  toldChief: string[]
+  /** Duplicate-account exceptions the CRM admin has merged inside Salesforce. */
+  merged: string[]
+  itFeed: ActivityItem[]
+  /** Append-only log of every person, system and agent action (R-SEC-6). */
+  audit: AuditEntry[]
+  /* AI supervisor */
+  /** Autonomy per agent action, keyed "agent.action" (R-AG-1). `agentLevels` mirrors each agent's headline action. */
+  actionLevels: Record<string, string>
+  pausedActions: string[]
+  /** The kill switch for every agent at once (R-AG-3). */
+  agentLayerPaused: boolean
+  agentLog: AgentLogEntry[]
+  aisupFeed: ActivityItem[]
 }
 
 const initial: State = {
@@ -116,7 +147,7 @@ const initial: State = {
   ledger: ledgerSeed,
   launched: [],
   opsFeed: [
-    { id: "o1", at: "2026-10-28T09:40:00", text: "The sync agent flagged two Salesforce accounts that look like one company", href: "/v/exception/EX-43" },
+    { id: "o1", at: "2026-10-28T09:40:00", text: "The Data Steward agent flagged two Salesforce accounts that look like one company", href: "/v/exception/EX-43" },
     { id: "o2", at: "2026-10-28T06:30:00", text: "Orchid Foods has had no Salesforce activity for 52 days", href: "/v/exception/EX-44" },
     { id: "o3", at: "2026-10-27T16:00:00", text: "You asked Dana Ortiz to raise the Reseller auto-approve limit for top partners", href: "/v/programs" },
     { id: "o4", at: "2026-10-27T15:12:30", text: "Salesforce timed out writing Atlas's role on Orion Labs; retrying", href: "/v/exception/EX-41" },
@@ -135,7 +166,22 @@ const initial: State = {
     { id: "e2", at: "2026-10-26T15:00:00", text: "Dana Ortiz proposed attribution model version 3", href: "/v/approval/AM-3" },
     { id: "e3", at: "2026-10-09T18:00:00", text: "Pinnacle Health Network closed won: $96,000, verified", href: "/v/revenue" },
   ],
-  agentLevels: Object.fromEntries(agentSeed.map((a) => [a.id, a.level])),
+  croNudges: [],
+  croFeed: croFeedSeed,
+  connections: connectionsSeed,
+  mappings: mappingsSeed,
+  groups: groupsSeed,
+  staff: staffSeed,
+  toldChief: [],
+  merged: [],
+  itFeed: itFeedSeed,
+  audit: auditSeed,
+  actionLevels: initialActionLevels,
+  pausedActions: [],
+  agentLayerPaused: false,
+  agentLog: agentLogSeed,
+  aisupFeed: aisupFeedSeed,
+  agentLevels: { ...Object.fromEntries(agentSeed.map((a) => [a.id, a.level])), ...initialAgentLevels },
   chiefFeed: [
     { id: "cf1", at: "2026-10-28T10:20:00", text: "Kestrel Energy passed 80% of its review deadline with Jordan Lee", href: "/c/approval/reg-REG-2038" },
     { id: "cf2", at: "2026-10-27T17:05:00", text: "Jordan Lee proposed a new credit split on Brookside Bank", href: "/c/approval/split-006Q8000020BrkS" },
@@ -184,7 +230,8 @@ type Action =
   | { type: "chiefDeal"; id: string; action: "approve" | "reject" | "nudge"; reason?: string; message?: string }
   | { type: "chiefRequest"; id: string; approve: boolean; note?: string }
   | { type: "chiefAssign"; partnerId: string; to: string; reason: string }
-  | { type: "toggleAgent"; id: string }
+  /** Pause or resume one agent. The channel chief by default; the AI supervisor passes `by`. */
+  | { type: "toggleAgent"; id: string; by?: string }
   // partner marketer
   | { type: "launchCampaign"; campaign: Campaign }
   | { type: "handOffLead"; id: string; rep: string; by: string }
@@ -208,6 +255,23 @@ type Action =
   // CEO / CFO
   | { type: "execDecide"; id: string; approve: boolean; note?: string }
   | { type: "shareBoard" }
+  // CRO: asks the person who can act; never decides
+  | { type: "croNudge"; nudge: Nudge }
+  | { type: "croExport"; rows: number }
+  // IT / CRM admin
+  | { type: "itConnector"; id: string; approve: boolean; note?: string }
+  | { type: "itMapping"; id: string; decision: "approve" | "alt" | "reject"; note?: string }
+  | { type: "itGroup"; id: string; role: string }
+  | { type: "itTellChief"; userId: string }
+  | { type: "itMerge"; exceptionId: string }
+  | { type: "itRetry"; writeId: string }
+  | { type: "itExport"; rows: number }
+  // AI supervisor: lowering is immediate, raising goes to the channel chief (R-AG-1)
+  | { type: "aiSetLevel"; agent: string; action: string; level: string }
+  | { type: "aiRequest"; req: ChangeRequest }
+  | { type: "aiPauseAction"; key: string }
+  | { type: "aiPauseAll" }
+  | { type: "aiReview"; id: string }
 
 const stamp = () => NOW.toISOString()
 const log = (s: State, text: string, href?: string): ActivityItem[] => [
@@ -227,6 +291,10 @@ const CHIEF = "Dana Ortiz"
 const OPS = "Ana Costa"
 const SELLER = "Sam Rivera"
 const CFO = "Morgan Hale"
+const CRO = "Priya Shah"
+const IT = "Kai Brennan"
+const AISUP = "Lee Park"
+const agentName = (id: string) => agentRoster.find((x) => x.id === id)?.name ?? agentSeed.find((x) => x.id === id)?.name ?? id
 const chiefLog = (s: State, text: string, href?: string): ActivityItem[] => [{ id: `c${Date.now()}${Math.random()}`, at: stamp(), text, href }, ...s.chiefFeed]
 const item = (list: ActivityItem[], text: string, href?: string): ActivityItem[] => [{ id: `v${Date.now()}${Math.random()}`, at: stamp(), text, href }, ...list]
 const daysTo = (iso: string) => Math.ceil((new Date(`${iso}T12:00:00`).getTime() - NOW.getTime()) / 86_400_000)
@@ -240,7 +308,7 @@ export function modelSplit(lines: { partnerId: string; role: PartnerRole }[]): C
   return raw
 }
 
-function reducer(s: State, a: Action): State {
+function core(s: State, a: Action): State {
   switch (a.type) {
     case "approve": {
       const reg = s.registrations.find((r) => r.id === a.id)!
@@ -554,14 +622,26 @@ function reducer(s: State, a: Action): State {
           programRules[p] = { ...cur, ...(r.patch ?? { autoApproveTop: 75_000 }), version: cur.version + 1, history: [{ version: cur.version + 1, at: stamp(), by: `${CHIEF} approved ${r.from}'s ${r.launch ? "set-up" : "change"}`, note: r.proposed }, ...cur.history] }
         }
       const scope = r.programs === "all" ? "every program" : r.programs.map((p) => `the ${p} program`).join(", ")
+      // An approved autonomy change sets that agent action's level; the chief sees the agent's headline action.
+      const agentId = r.agent ?? "deal-desk"
+      const actId = r.action ?? "decide"
+      const lvl = r.level ?? "A4"
+      const raised = a.approve && r.kind === "autonomy"
+      const headline = agentRoster.find((x) => x.id === agentId)?.headline === actId
       return {
         ...s,
         requests: s.requests.map((x) => (x.id === a.id ? { ...x, status: a.approve ? "approved" : "declined", note: a.note } : x)),
         programRules,
         launched: a.approve && r.launch && r.programs !== "all" ? [...s.launched, ...r.programs] : s.launched,
         opsFeed: r.from === OPS ? item(s.opsFeed, `${CHIEF} ${a.approve ? "approved" : "declined"}: ${r.title}${a.note ? `. "${a.note}"` : ""}`, "/v/programs") : s.opsFeed,
-        agentLevels: a.approve && r.kind === "autonomy" ? { ...s.agentLevels, "deal-desk": "A4" } : s.agentLevels,
-        notices: a.approve && r.kind === "rule" ? notice(s, "Program rules changed", `${r.title}. Applies to ${scope}, whoever looks after the partner.`, "/home") : s.notices,
+        aisupFeed: r.from === AISUP ? item(s.aisupFeed, `${CHIEF} ${a.approve ? "approved" : "declined"}: ${r.title}${a.note ? `. "${a.note}"` : ""}`, `/v/agent/${agentId}`) : s.aisupFeed,
+        agentLevels: raised && headline ? { ...s.agentLevels, [agentId]: lvl } : s.agentLevels,
+        actionLevels: raised ? { ...s.actionLevels, [actionKey(agentId, actId)]: lvl } : s.actionLevels,
+        notices: a.approve && r.kind === "rule"
+          ? notice(s, "Program rules changed", `${r.title}. Applies to ${scope}, whoever looks after the partner.`, "/home")
+          : raised && agentId === "deal-desk"
+            ? notice(s, "The Deal Desk agent can do more on its own", `${r.title}. Approved by ${CHIEF}; every action is logged and can be reversed.`, "/queue")
+            : s.notices,
         activity: a.approve && r.kind === "rule" ? log(s, `${CHIEF} approved a rule change for ${scope}: ${r.proposed}`) : s.activity,
         chiefFeed: chiefLog(s, `You ${a.approve ? "approved" : "declined"}: ${r.title}`, "/c/program"),
       }
@@ -817,12 +897,153 @@ function reducer(s: State, a: Action): State {
     case "shareBoard":
       return { ...s, execFeed: item(s.execFeed, "You shared the board view: verified figures only", "/v/board") }
 
-    case "toggleAgent":
+    /* ---------- CRO ---------- */
+    case "croNudge": {
+      const n = a.nudge
+      const reg = s.registrations.find((r) => r.customer === n.account)
+      const href = reg ? `/registration/${reg.id}` : "/queue"
       return {
         ...s,
-        pausedAgents: s.pausedAgents.includes(a.id) ? s.pausedAgents.filter((x) => x !== a.id) : [...s.pausedAgents, a.id],
-        chiefFeed: chiefLog(s, `You ${s.pausedAgents.includes(a.id) ? "resumed" : "paused"} the ${agentSeed.find((x) => x.id === a.id)?.name ?? a.id}`, "/c/program"),
+        croNudges: [n, ...s.croNudges],
+        croFeed: item(s.croFeed, `You asked ${n.toName} about ${n.account}`, "/v/risk"),
+        notices: n.to === "pam" ? notice(s, `${CRO} (CRO) asked about ${n.account}`, n.text, href, "warn") : s.notices,
+        sellerFeed: n.to === "seller" && n.toName === SELLER ? item(s.sellerFeed, `${CRO} (CRO) asked about ${n.account}: "${n.text}"`, "/v/home") : s.sellerFeed,
+        chiefFeed: n.to === "chief" ? chiefLog(s, `${CRO} (CRO) flagged ${n.account}: "${n.text}"`, reg?.state === "under_review" ? `/c/approval/reg-${reg.id}` : undefined) : s.chiefFeed,
       }
+    }
+    case "croExport":
+      return { ...s, croFeed: item(s.croFeed, `You exported the partner pipeline (${a.rows} rows)`, "/v/pipeline") }
+
+    /* ---------- IT / CRM admin ---------- */
+    case "itConnector": {
+      const c = s.connections.find((x) => x.id === a.id)!
+      return {
+        ...s,
+        connections: s.connections.map((x) => (x.id === a.id ? { ...x, status: a.approve ? "connected" : "declined", decided: { by: IT, at: stamp(), note: a.note } } : x)),
+        itFeed: item(s.itFeed, `You ${a.approve ? "connected" : "turned down"} ${c.name}`, "/v/connections"),
+        chiefFeed: c.request?.by === CHIEF
+          ? chiefLog(s, a.approve ? `${IT} (IT) connected ${c.name}. Approvals can reach you and the directors there now` : `${IT} (IT) didn't connect ${c.name}${a.note ? `: "${a.note}"` : ""}`)
+          : s.chiefFeed,
+      }
+    }
+    case "itMapping": {
+      const m = s.mappings.find((x) => x.id === a.id)!
+      const used = a.decision === "alt" ? m.alt?.target : a.decision === "approve" ? m.target : undefined
+      const field = used?.split(" (")[0]
+      return {
+        ...s,
+        mappings: s.mappings.map((x) => (x.id === a.id ? { ...x, status: a.decision === "reject" ? "rejected" : "approved", decidedBy: IT, decidedAt: stamp(), used, note: a.note } : x)),
+        itFeed: item(s.itFeed, used ? `You approved ${m.prm} → ${field}` : `You turned down ${m.prm} → ${m.target.split(" (")[0]}`, "/v/mappings"),
+        opsFeed: used ? item(s.opsFeed, `${IT} (IT) mapped ${m.prm} to ${field} in Salesforce`, "/v/programs") : s.opsFeed,
+        sellerFeed: used && m.id === "FM-12" ? item(s.sellerFeed, "Partner protection end dates now show on your Salesforce opportunities", "/v/accounts") : s.sellerFeed,
+      }
+    }
+    case "itGroup": {
+      const g = s.groups.find((x) => x.id === a.id)!
+      return {
+        ...s,
+        groups: s.groups.map((x) => (x.id === a.id ? { ...x, role: a.role, status: "mapped" } : x)),
+        itFeed: item(s.itFeed, `You gave ${g.group} (${g.people} people) the ${a.role} role`, "/v/users"),
+      }
+    }
+    case "itTellChief": {
+      const u = s.staff.find((x) => x.id === a.userId)!
+      return {
+        ...s,
+        toldChief: [...s.toldChief, u.id],
+        chiefFeed: chiefLog(s, `${IT} (IT): ${u.name} leaves Brightline on ${new Date(`${u.leavesOn}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}. ${u.partners} partners still need a new partner manager`, "/c/team"),
+        itFeed: item(s.itFeed, `You told ${CHIEF} that ${u.name}'s ${u.partners} partners need a new partner manager`, "/v/users"),
+      }
+    }
+    case "itMerge": {
+      const x = s.exceptions.find((e) => e.id === a.exceptionId)!
+      return {
+        ...s,
+        merged: [...s.merged, x.id],
+        exceptions: s.exceptions.map((e) => (e.id === x.id && e.resolution ? { ...e, resolution: { ...e.resolution, text: `${e.resolution.text} ${IT} merged ACME Mfg. Inc. into Acme Manufacturing in Salesforce.` } } : e)),
+        itFeed: item(s.itFeed, "You merged ACME Mfg. Inc. into Acme Manufacturing in Salesforce", "/v/connections"),
+        opsFeed: item(s.opsFeed, `${IT} (IT) merged ACME Mfg. Inc. into Acme Manufacturing in Salesforce`, `/v/exception/${x.id}`),
+        sellerFeed: item(s.sellerFeed, "A duplicate record, ACME Mfg. Inc., was merged into your Acme Manufacturing account", "/v/account/acme"),
+      }
+    }
+    case "itRetry": {
+      const w = s.crmWrites.find((x) => x.id === a.writeId)!
+      const regId = w.href?.split("/").pop()
+      const ex = s.exceptions.find((e) => e.kind === "write" && e.regId === regId && e.status !== "resolved")
+      const issue = s.crmIssues.find((i) => i.href === w.href)
+      return {
+        ...s,
+        crmWrites: s.crmWrites.map((x) => (x.id === w.id ? { ...x, status: "synced", attempt: undefined } : x)),
+        crmIssues: issue ? s.crmIssues.filter((i) => i.id !== issue.id) : s.crmIssues,
+        exceptions: ex ? s.exceptions.map((e) => (e.id === ex.id ? { ...e, status: "resolved", resolution: { by: IT, at: stamp(), text: `${IT} (IT) retried the write from the Salesforce connection; it's in Salesforce now.`, choice: "retry" } } : e)) : s.exceptions,
+        opsFeed: ex ? item(s.opsFeed, `${IT} (IT) retried the Salesforce write: ${ex.title}`, `/v/exception/${ex.id}`) : s.opsFeed,
+        itFeed: item(s.itFeed, `You retried a Salesforce write: ${w.text}`, "/v/connections"),
+        activity: log(s, `${IT} (IT) retried the Salesforce write; it went through`, w.href),
+      }
+    }
+    case "itExport":
+      return { ...s, itFeed: item(s.itFeed, `You exported the audit log (${a.rows} entries)`, "/v/audit") }
+
+    /* ---------- AI supervisor ---------- */
+    case "aiSetLevel": {
+      const ag = agentRoster.find((x) => x.id === a.agent)!
+      const act = ag.actions.find((x) => x.id === a.action)!
+      const from = s.actionLevels[actionKey(a.agent, a.action)]
+      return {
+        ...s,
+        actionLevels: { ...s.actionLevels, [actionKey(a.agent, a.action)]: a.level },
+        agentLevels: ag.headline === a.action ? { ...s.agentLevels, [a.agent]: a.level } : s.agentLevels,
+        aisupFeed: item(s.aisupFeed, `You lowered the ${ag.name} from ${from} to ${a.level}: ${act.label.toLowerCase()}`, `/v/agent/${a.agent}`),
+        chiefFeed: chiefLog(s, `${AISUP} (AI supervisor) lowered the ${ag.name} from ${from} to ${a.level}: ${act.label.toLowerCase()}`, "/c/program"),
+        notices: a.agent === "deal-desk" ? notice(s, "The Deal Desk agent does less on its own now", `${AISUP} lowered "${act.label}" from ${from} to ${a.level}.`, "/queue") : s.notices,
+      }
+    }
+    case "aiRequest":
+      return {
+        ...s,
+        requests: [a.req, ...s.requests],
+        aisupFeed: item(s.aisupFeed, `You asked ${CHIEF} to approve: ${a.req.title}`, `/v/agent/${a.req.agent}`),
+        chiefFeed: chiefLog(s, `${AISUP} (AI supervisor) asked for more autonomy: ${a.req.title}`, `/c/approval/req-${a.req.id}`),
+      }
+    case "aiPauseAction": {
+      const [agentId, actId] = a.key.split(".")
+      const ag = agentRoster.find((x) => x.id === agentId)!
+      const label = ag.actions.find((x) => x.id === actId)?.label.toLowerCase()
+      const resume = s.pausedActions.includes(a.key)
+      return {
+        ...s,
+        pausedActions: resume ? s.pausedActions.filter((x) => x !== a.key) : [...s.pausedActions, a.key],
+        aisupFeed: item(s.aisupFeed, `You ${resume ? "resumed" : "paused"} one action of the ${ag.name}: ${label}`, `/v/agent/${agentId}`),
+        chiefFeed: chiefLog(s, `${AISUP} (AI supervisor) ${resume ? "resumed" : "paused"} one action of the ${ag.name}: ${label}`, "/c/program"),
+      }
+    }
+    case "aiPauseAll": {
+      const pause = !s.agentLayerPaused
+      return {
+        ...s,
+        agentLayerPaused: pause,
+        aisupFeed: item(s.aisupFeed, pause ? "You paused every agent (kill switch)" : "You turned every agent back on", "/v/agents"),
+        chiefFeed: chiefLog(s, pause ? `${AISUP} (AI supervisor) paused every AI agent` : `${AISUP} (AI supervisor) turned the AI agents back on`, "/c/program"),
+        notices: notice(s, pause ? "All AI agents are paused" : "AI agents are back on", pause ? `${AISUP} used the kill switch. You decide everything by hand for now; the rules still approve clean deals.` : "Recommendations, reminders and checks are running again.", "/queue", pause ? "warn" : "info"),
+      }
+    }
+    case "aiReview":
+      return { ...s, agentLog: s.agentLog.map((x) => (x.id === a.id ? { ...x, reviewed: true } : x)) }
+
+    case "toggleAgent": {
+      const resume = s.pausedAgents.includes(a.id)
+      const verb = resume ? "resumed" : "paused"
+      const byLee = a.by === AISUP
+      return {
+        ...s,
+        pausedAgents: resume ? s.pausedAgents.filter((x) => x !== a.id) : [...s.pausedAgents, a.id],
+        chiefFeed: chiefLog(s, byLee ? `${AISUP} (AI supervisor) ${verb} the ${agentName(a.id)}` : `You ${verb} the ${agentName(a.id)}`, "/c/program"),
+        aisupFeed: item(s.aisupFeed, byLee ? `You ${verb} the ${agentName(a.id)}` : `${CHIEF} ${verb} the ${agentName(a.id)}`, `/v/agent/${a.id}`),
+        notices: a.id === "deal-desk"
+          ? notice(s, `The Deal Desk agent is ${verb}`, resume ? "Its recommendations are back on your registrations." : `${byLee ? AISUP : CHIEF} paused it. You decide registrations without its recommendation; the rules still approve clean deals.`, "/queue", resume ? "info" : "warn")
+          : s.notices,
+      }
+    }
     case "chiefAssign": {
       const p = s.partners.find((x) => x.id === a.partnerId)!
       const from = p.manager ?? (p.assigned ? "Jordan Lee" : "Not assigned")
@@ -849,6 +1070,149 @@ function reducer(s: State, a: Action): State {
       }
     }
   }
+}
+
+/* ---------- agent audit: what people did with each agent's work (R-AG-5) ---------- */
+
+type Outcome = Pick<AgentLogEntry, "agent" | "action" | "text" | "target" | "outcome" | "who" | "detail" | "confidence" | "evidence"> & { ref: string }
+
+const aiVerb = { approve: "approve", reject: "reject", request_info: "ask for info" } as const
+const didVerb = { approve: "approved", reject: "rejected", requestInfo: "asked for info" } as const
+
+/** Paused agents give no advice, so nobody can agree with or override them. */
+const agentOff = (s: State, agent: string, action: string) => s.agentLayerPaused || s.pausedAgents.includes(agent) || s.pausedActions.includes(actionKey(agent, action))
+
+/** When a person decides something an agent recommended, records whether they agreed or overrode it. */
+function agentOutcome(s: State, a: Action): Outcome | null {
+  if ((a.type === "approve" || a.type === "reject" || a.type === "requestInfo" || a.type === "chiefDeal") && agentOff(s, "deal-desk", "recommend")) return null
+  if (a.type === "resolveException" && agentOff(s, "data-steward", "suggest")) return null
+  if (a.type === "sendCoSell" && agentOff(s, "cosell", "draft")) return null
+  if (a.type === "approve" || a.type === "reject" || a.type === "requestInfo" || (a.type === "chiefDeal" && a.action !== "nudge")) {
+    const reg = s.registrations.find((r) => r.id === a.id)
+    if (!reg?.ai) return null
+    const did = a.type === "chiefDeal" ? (a.action === "approve" ? "approve" : "reject") : a.type === "requestInfo" ? "request_info" : a.type
+    const who = a.type === "chiefDeal" ? CHIEF : "Jordan Lee"
+    const agreed = did === reg.ai.action
+    const verb = a.type === "chiefDeal" ? (did === "approve" ? "approved" : "rejected") : didVerb[a.type]
+    return {
+      ref: reg.id, agent: "deal-desk", action: "recommend", text: `Recommended: ${reg.ai.headline.charAt(0).toLowerCase()}${reg.ai.headline.slice(1)}`, target: reg.customer,
+      outcome: agreed ? "agreed" : "overridden", who, confidence: reg.ai.confidence, evidence: reg.ai.evidence.slice(0, 2),
+      detail: agreed ? undefined : `${who} ${verb} instead of choosing to ${aiVerb[reg.ai.action]}${a.type === "reject" ? `: ${a.reason}` : a.type === "chiefDeal" && a.reason ? `: ${a.reason}` : ""}.`,
+    }
+  }
+  if (a.type === "resolveException") {
+    const x = s.exceptions.find((e) => e.id === a.id)
+    if (!x) return null
+    const suggested = x.options.find((o) => o.suggested)
+    const picked = x.options.find((o) => o.id === a.choice)
+    const agreed = suggested?.id === a.choice
+    return {
+      ref: x.id, agent: "data-steward", action: "suggest", text: `Suggested: ${x.ai.headline.charAt(0).toLowerCase()}${x.ai.headline.slice(1)}`, target: x.title.split(":")[0],
+      outcome: agreed ? "agreed" : "overridden", who: OPS, confidence: x.ai.confidence, evidence: x.ai.evidence.slice(0, 2),
+      detail: agreed ? undefined : `${OPS} chose: ${picked?.label ?? a.choice}.`,
+    }
+  }
+  if (a.type === "sendCoSell") {
+    const list = candidatesSeed[a.req.accountId] ?? []
+    const c = list.find((x) => x.partnerId === a.req.partnerId)
+    const acct = sellerAccounts.find((x) => x.id === a.req.accountId)
+    const asDrafted = !!c && a.req.message.trim() === c.draft.trim()
+    return {
+      ref: `cosell-${a.req.id}`, agent: "cosell", action: "draft", text: `Ranked ${partnerName(s, a.req.partnerId)} and drafted the intro`, target: acct?.name ?? a.req.accountId,
+      outcome: asDrafted ? "agreed" : "edited", who: SELLER, confidence: c?.score ?? 0.6, evidence: c?.reasons.slice(0, 2) ?? [],
+      detail: asDrafted ? `${SELLER} sent it as drafted.` : `${SELLER} edited the draft before sending.`,
+    }
+  }
+  return null
+}
+
+function applyOutcome(log: AgentLogEntry[], o: Outcome): AgentLogEntry[] {
+  const i = log.findIndex((x) => x.ref === o.ref && x.outcome === "waiting")
+  if (i >= 0) return log.map((x, j) => (j === i ? { ...x, outcome: o.outcome, who: o.who, detail: o.detail } : x))
+  return [{ id: `AL-${902 + log.length - agentLogSeed.length}`, at: stamp(), cost: 0.3, ...o }, ...log]
+}
+
+/* ---------- the audit log: one line for every action, from every portal (R-SEC-6) ---------- */
+
+type Audit = Pick<AuditEntry, "actor" | "kind" | "area" | "text">
+
+function auditOf(s: State, a: Action): Audit | null {
+  const reg = (id: string) => s.registrations.find((r) => r.id === id)
+  const P = (actor: string, area: Audit["area"], text: string): Audit => ({ actor, kind: "person", area, text })
+  const at = (by: string, companyId = "ridgeway") => `${by} (${partnerName(s, companyId)})`
+  switch (a.type) {
+    case "approve": return P("Jordan Lee", "Deals", `Approved ${reg(a.id)?.customer} for ${partnerName(s, reg(a.id)?.partnerId ?? "")}`)
+    case "reject": return P("Jordan Lee", "Deals", `Rejected ${reg(a.id)?.customer}: ${a.reason}`)
+    case "requestInfo": return P("Jordan Lee", "Deals", `Asked ${partnerName(s, reg(a.id)?.partnerId ?? "")} for more on ${reg(a.id)?.customer}`)
+    case "synced": return { actor: "Salesforce sync", kind: "system", area: "Integrations", text: `Wrote ${reg(a.id)?.customer} to Salesforce` }
+    case "extension": return P("Jordan Lee", "Deals", `${a.grant ? `Extended protection by ${a.days} days on` : "Declined an extension on"} ${s.extensions.find((e) => e.id === a.id)?.customer}`)
+    case "acceptApp": return P("Jordan Lee", "Partners", `Accepted ${s.applications.find((x) => x.id === a.id)?.company} as ${a.tier}`)
+    case "rejectApp": return P("Jordan Lee", "Partners", `Declined the application from ${s.applications.find((x) => x.id === a.id)?.company}`)
+    case "escalateApp": return P("Jordan Lee", "Partners", `Escalated the application from ${s.applications.find((x) => x.id === a.id)?.company}`)
+    case "addPartner": return P("Jordan Lee", "Credit", `Added ${partnerName(s, a.partnerId)} as ${a.role} on ${s.opportunities.find((o) => o.id === a.oppId)?.account}`)
+    case "propose": return P("Jordan Lee", "Credit", `Proposed a credit split on ${s.opportunities.find((o) => o.id === a.oppId)?.account}`)
+    case "sendLead": return P("Jordan Lee", "Partners", `Sent ${s.leads.find((l) => l.id === a.id)?.company} to ${partnerName(s, a.partnerId)} as a lead`)
+    case "partnerRegister": return P(at(a.by, a.reg.partnerId), "Deals", `Registered ${a.reg.customer}, ${money(a.reg.value)}`)
+    case "partnerReply": return P(at(a.by, reg(a.id)?.partnerId), "Deals", `Answered the question on ${reg(a.id)?.customer}`)
+    case "requestExtension": return P(at(a.by, reg(a.regId)?.partnerId), "Deals", `Asked for ${a.days} more days on ${reg(a.regId)?.customer}`)
+    case "leadAccept": return P(at(a.by), "Partners", `Accepted the lead ${s.leads.find((l) => l.id === a.id)?.company}`)
+    case "leadDecline": return P(at(a.by), "Partners", `Declined the lead ${s.leads.find((l) => l.id === a.id)?.company}`)
+    case "invite": return P(at("Paul Okafor"), "Access", `Invited ${a.member.name} to the partner portal`)
+    case "setMemberStatus": return P(at("Paul Okafor"), "Access", `Set ${s.team.find((m) => m.id === a.id)?.name} to ${a.status}`)
+    case "setCanRegister": return P(at("Paul Okafor"), "Access", `${a.value ? "Let" : "Stopped"} ${s.team.find((m) => m.id === a.id)?.name} register deals`)
+    case "dispute": return P(at(a.by, reg(a.regId)?.partnerId), "Credit", `Disputed the credit on ${reg(a.regId)?.customer}`)
+    case "chiefSplit": return P(CHIEF, "Credit", `${a.approve ? "Approved" : "Declined"} the credit split on ${s.opportunities.find((o) => o.id === a.oppId)?.account}`)
+    case "chiefExtension": return P(CHIEF, "Deals", `${a.grant ? "Granted" : "Declined"} a second extension on ${s.extensions.find((e) => e.id === a.id)?.customer}`)
+    case "chiefApp": return P(CHIEF, "Partners", `${a.accept ? "Accepted" : "Declined"} the application from ${s.applications.find((x) => x.id === a.id)?.company}`)
+    case "chiefDeal": return a.action === "nudge" ? P(CHIEF, "Deals", `Nudged Jordan Lee about ${reg(a.id)?.customer}`) : P(CHIEF, "Deals", `${a.action === "approve" ? "Approved" : "Rejected"} ${reg(a.id)?.customer} (escalated)`)
+    case "chiefRequest": return P(CHIEF, s.requests.find((r) => r.id === a.id)?.kind === "autonomy" ? "Agents" : "Programs", `${a.approve ? "Approved" : "Declined"}: ${s.requests.find((r) => r.id === a.id)?.title}`)
+    case "chiefAssign": return P(CHIEF, "Partners", `Moved ${partnerName(s, a.partnerId)} to ${a.to}`)
+    case "chiefMdf": return P(CHIEF, "Credit", `${a.approve ? "Approved" : "Declined"} a funds request (${s.mdf.find((m) => m.id === a.id)?.campaign})`)
+    case "toggleAgent": return P(a.by ?? CHIEF, "Agents", `${s.pausedAgents.includes(a.id) ? "Resumed" : "Paused"} the ${agentName(a.id)}`)
+    case "launchCampaign": return P(at(a.campaign.owner, a.campaign.companyId), "Partners", `Launched the campaign ${a.campaign.name}`)
+    case "handOffLead": return P(at(a.by), "Partners", `Handed a campaign lead to ${a.rep}`)
+    case "requestMdf": return P(at(a.req.requestedBy, a.req.companyId), "Credit", `Asked for ${money(a.req.amount)} of marketing funds`)
+    case "claimMdf": return P(at("Priya Raman"), "Credit", `Claimed ${money(a.amount)} of marketing funds`)
+    case "logMilestone": return P(at(a.by, "northpeak"), "Credit", `Logged a delivery milestone: ${a.kind}`)
+    case "passExam": return P(at(s.skills.find((k) => k.id === a.skillId)?.person ?? "Raj Mehta", "northpeak"), "Partners", `Passed the ${s.skills.find((k) => k.id === a.skillId)?.product} exam`)
+    case "resolveException": return P(OPS, "Data", `${s.exceptions.find((e) => e.id === a.id)?.title}: chose "${s.exceptions.find((e) => e.id === a.id)?.options.find((o) => o.id === a.choice)?.label}"`)
+    case "proposeRule": return P(OPS, "Programs", `Asked for: ${a.req.title}`)
+    case "sendCoSell": return P(SELLER, "Deals", `Sent ${partnerName(s, a.req.partnerId)} a co-sell request`)
+    case "cosellRespond": {
+      const r = s.cosell.find((x) => x.id === a.id)
+      return P(r ? at(a.by, r.partnerId) : a.by, "Deals", `${a.accept ? "Accepted" : "Declined"} ${SELLER}'s co-sell request`)
+    }
+    case "sellerNote": return P(SELLER, "Deals", `Added context on ${reg(a.regId)?.customer} for the partner manager`)
+    case "execDecide": return P(CFO, "Credit", `${a.approve ? "Approved" : "Declined"}: ${s.execApprovals.find((e) => e.id === a.id)?.title}`)
+    case "shareBoard": return P(CFO, "Data", "Shared a read-only link to the board view")
+    case "croNudge": return P(CRO, "Deals", `Asked ${a.nudge.toName} about ${a.nudge.account}`)
+    case "croExport": return P(CRO, "Data", `Exported the partner pipeline (${a.rows} rows)`)
+    case "itConnector": return P(IT, "Integrations", `${a.approve ? "Connected" : "Turned down"} ${s.connections.find((c) => c.id === a.id)?.name}`)
+    case "itMapping": {
+      const m = s.mappings.find((x) => x.id === a.id)
+      return P(IT, "Integrations", a.decision === "reject" ? `Turned down a field mapping: ${m?.prm}` : `Approved a field mapping: ${m?.prm} → ${(a.decision === "alt" ? m?.alt?.target : m?.target)?.split(" (")[0]}`)
+    }
+    case "itGroup": return P(IT, "Access", `Gave the Okta group ${s.groups.find((g) => g.id === a.id)?.group} the ${a.role} role`)
+    case "itTellChief": return P(IT, "Access", `Told ${CHIEF} that ${s.staff.find((u) => u.id === a.userId)?.name}'s partners need a new partner manager`)
+    case "itMerge": return P(IT, "Data", "Merged ACME Mfg. Inc. into Acme Manufacturing in Salesforce")
+    case "itRetry": return P(IT, "Integrations", `Retried a Salesforce write: ${s.crmWrites.find((w) => w.id === a.writeId)?.text}`)
+    case "itExport": return P(IT, "Access", `Exported the audit log (${a.rows} entries)`)
+    case "aiSetLevel": return P(AISUP, "Agents", `Lowered the ${agentName(a.agent)} to ${a.level}: ${agentRoster.find((x) => x.id === a.agent)?.actions.find((x) => x.id === a.action)?.label.toLowerCase()}`)
+    case "aiRequest": return P(AISUP, "Agents", `Asked for: ${a.req.title}`)
+    case "aiPauseAction": return P(AISUP, "Agents", `${s.pausedActions.includes(a.key) ? "Resumed" : "Paused"} one action of the ${agentName(a.key.split(".")[0])}`)
+    case "aiPauseAll": return P(AISUP, "Agents", s.agentLayerPaused ? "Turned every AI agent back on" : "Paused every AI agent (kill switch)")
+    default: return null
+  }
+}
+
+/** Every action goes through here: the portal's own change, then the agent audit and the audit log. */
+function reducer(s: State, a: Action): State {
+  let next = core(s, a)
+  const o = agentOutcome(s, a)
+  if (o) next = { ...next, agentLog: applyOutcome(next.agentLog, o) }
+  const au = auditOf(s, a)
+  if (au) next = { ...next, audit: [{ id: `AU-${5121 + next.audit.length - auditSeed.length}`, at: stamp(), ...au }, ...next.audit] }
+  return next
 }
 
 interface Store {

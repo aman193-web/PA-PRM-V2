@@ -156,4 +156,5 @@ rules.push(
   r("R-AG-3", "agents", "Kill switch", "Pause any agent, action type or the whole agent layer; takes effect within seconds.", "specified", [{ doc: "Personas" }], { stage: "0" }),
   r("R-AG-4", "agents", "Agents act as the user", "Agents get exactly the permissions of the user or service account they act for. Every tool call is re-authorised and fails closed.", "proposed", [{ doc: "Arch", ref: "§8" }], { stage: "0" }),
   r("R-AG-5", "agents", "Everything is audited", "Each agent action is logged with model, prompt version, evidence, confidence and cost. AI-drafted content is labelled until approved.", "specified", [{ doc: "BRD", ref: "§10" }], { stage: "0" }),
+  r("R-AG-6", "agents", "Lowering is immediate, raising needs approval", "The AI supervisor can lower an agent action's level at once; the channel chief is told. Raising it needs the channel chief, and never past the action's cap.", "proposed", [{ doc: "Personas" }, { doc: "Proto" }], { stage: "0", tags: ["lower autonomy", "raise autonomy"] }),
 )

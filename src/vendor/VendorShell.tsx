@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
-  ArrowUp, Bell, Building2, Handshake, Home, Inbox, KeyRound, Layers, LogOut, Moon, Presentation, Route, Scale, Search,
-  ShieldCheck, Sparkles, Sun, TrendingUp, Wrench, type LucideIcon,
+  ArrowUp, Bell, Bot, Building2, Coins, Cpu, Handshake, Home, Inbox, KeyRound, Layers, LogOut, Moon, Presentation, Route, Scale,
+  ScrollText, Search, ShieldCheck, Shuffle, Sparkles, Sun, TrendingUp, TriangleAlert, Users, Workflow, Wrench, type LucideIcon,
 } from "lucide-react"
 import { Logo } from "@/components/common"
 import { Button } from "@/components/ui/button"
@@ -17,8 +17,9 @@ import { useTheme } from "@/lib/theme"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
 import { budget } from "@/chief/data"
-import { exceptionKindLabel, type VendorRoleId } from "@/vendor/data"
-import { partnerNameOf, useExec, useOps, useSeller, useVendor } from "@/vendor/useVendor"
+import { exceptionKindLabel, sellerAccounts, type VendorRoleId } from "@/vendor/data"
+import { agentRoster } from "@/vendor/agents"
+import { partnerNameOf, useAdmin, useAgents, useExec, useOps, useSales, useSeller, useVendor } from "@/vendor/useVendor"
 
 /* ---------- navigation ---------- */
 
@@ -29,6 +30,31 @@ function useNav(): NavItem[] {
   const o = useOps()
   const s = useSeller()
   const e = useExec()
+  const c = useSales()
+  const ad = useAdmin()
+  const g = useAgents()
+  if (me.role === "cro")
+    return [
+      { key: "home", label: "Home", href: "/v/home", icon: Home, mobile: true },
+      { key: "pipeline", label: "Pipeline", href: "/v/pipeline", icon: Layers, mobile: true },
+      { key: "risk", label: "Deals at risk", short: "At risk", href: "/v/risk", icon: TriangleAlert, count: c.risks.filter((r) => !r.underway && !r.nudges.length).length, mobile: true },
+      { key: "conflicts", label: "Channel conflicts", short: "Conflicts", href: "/v/conflicts", icon: Scale, count: c.openConflicts.length, mobile: true },
+    ]
+  if (me.role === "it")
+    return [
+      { key: "home", label: "Home", href: "/v/home", icon: Home, mobile: true },
+      { key: "connections", label: "Connections", href: "/v/connections", icon: Workflow, count: ad.requested.length + (ad.merge ? 1 : 0), mobile: true },
+      { key: "mappings", label: "Field mappings", short: "Mappings", href: "/v/mappings", icon: Shuffle, count: ad.pendingMappings.length },
+      { key: "users", label: "Users and roles", short: "Users", href: "/v/users", icon: Users, count: ad.newGroups.length + ad.leavers.length, mobile: true },
+      { key: "audit", label: "Audit log", short: "Audit", href: "/v/audit", icon: ScrollText, mobile: true },
+    ]
+  if (me.role === "aisup")
+    return [
+      { key: "home", label: "Home", href: "/v/home", icon: Home, mobile: true },
+      { key: "agents", label: "Agents", href: "/v/agents", icon: Cpu, mobile: true },
+      { key: "activity", label: "Agent activity", short: "Activity", href: "/v/activity", icon: Bot, count: g.overrides.length, mobile: true },
+      { key: "cost", label: "AI cost", short: "Cost", href: "/v/cost", icon: Coins, mobile: true },
+    ]
   if (me.role === "revops")
     return [
       { key: "home", label: "Home", href: "/v/home", icon: Home, mobile: true },
@@ -53,6 +79,13 @@ function useNav(): NavItem[] {
 /** Each role's main action: a button at the top of the sidebar and the centre of the phone bar. */
 function useMainAction(role: VendorRoleId) {
   const o = useOps()
+  const ad = useAdmin()
+  if (role === "cro") return { key: "risk", label: "Open deals at risk", short: "At risk", href: "/v/risk", icon: TriangleAlert }
+  if (role === "it") {
+    const connector = !ad.pendingMappings.length && ad.requested.length > 0
+    return { key: "approve", label: connector ? "Approve a connector" : "Approve a mapping", short: "Approve", href: connector ? "/v/connections" : "/v/mappings", icon: Shuffle }
+  }
+  if (role === "aisup") return { key: "agents", label: "Pause or tune an agent", short: "Agents", href: "/v/agents", icon: Cpu }
   if (role === "revops") return { key: "resolve", label: "Resolve next exception", short: "Resolve", href: o.open[0] ? `/v/exception/${o.open[0].id}` : "/v/exceptions", icon: Wrench }
   if (role === "ae") return { key: "find", label: "Find a partner", short: "Find", href: "/v/find", icon: Handshake }
   return { key: "board", label: "Share the board view", short: "Share", href: "/v/board", icon: Presentation }
@@ -62,8 +95,16 @@ const avatarTint: Record<VendorRoleId, string> = {
   revops: "bg-[#e8f6fb] text-[#06779e] dark:bg-[#10303d] dark:text-[#7fd3f0]",
   ae: "bg-[#fdecef] text-[#b4234a] dark:bg-[#3a1520] dark:text-[#f5a3b8]",
   ceo: "bg-[#eef2e3] text-[#4d6b1f] dark:bg-[#1f2a12] dark:text-[#b5d77a]",
+  cro: "bg-[#fdeee4] text-[#b4441a] dark:bg-[#3a1d10] dark:text-[#f7b08a]",
+  it: "bg-[#e9edf2] text-[#3d4f66] dark:bg-[#1d2733] dark:text-[#a9bacf]",
+  aisup: "bg-[#f9e8f7] text-[#a02a94] dark:bg-[#3a1537] dark:text-[#f0a6e6]",
 }
-const assistantSub: Record<VendorRoleId, string> = { revops: "About exceptions and data", ae: "About your accounts and partners", ceo: "About revenue and return" }
+const assistantSub: Record<VendorRoleId, string> = {
+  revops: "About exceptions and data", ae: "About your accounts and partners", ceo: "About revenue and return",
+  cro: "About pipeline and deals at risk", it: "About systems, users and the log", aisup: "About agents and AI cost",
+}
+/** Roles whose main action is already a tab, so the phone bar has no raised button. */
+const centerless = (r: VendorRoleId) => r === "ceo" || r === "cro" || r === "aisup"
 
 /* ---------- assistant: answers from what the signed-in person can see ---------- */
 
@@ -75,6 +116,9 @@ const suggestions: Record<VendorRoleId, string[]> = {
   revops: ["What needs fixing today?", "Is partner revenue reconciled?", "Is Salesforce in sync?", "What's waiting for Dana?"],
   ae: ["What needs me today?", "Who should I bring in on Solstice Hotels?", "What are partners doing on my accounts?", "Find a partner"],
   ceo: ["Is the channel worth the investment?", "What needs my approval?", "Who are our top partners?", "What would model version 3 change?"],
+  cro: ["Which partner deals close this quarter?", "What's at risk?", "Any channel conflicts?", "How big is partner pipeline?"],
+  it: ["What needs me?", "Is Salesforce in sync?", "Who has access?", "What's in the audit log today?"],
+  aisup: ["What did the agents do today?", "Which overrides need a look?", "What does AI cost this month?", "What's waiting for Dana?"],
 }
 const shortcuts: Record<string, string> = { "Find a partner": "/v/find" }
 
@@ -84,6 +128,9 @@ function VendorAssistant({ children }: { children: ReactNode }) {
   const o = useOps()
   const s = useSeller()
   const e = useExec()
+  const c = useSales()
+  const ad = useAdmin()
+  const g = useAgents()
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [draft, setDraft] = useState("")
@@ -128,9 +175,43 @@ function VendorAssistant({ children }: { children: ReactNode }) {
       return { from: "ai", text: `Top partners by verified revenue: ${e.rev.top.map((p) => `${p.name} (${money(p.won)})`).join(", ")}.`, links: [{ label: "Partner revenue", href: "/v/revenue" }] }
     return { from: "ai", text: "I can help with partner revenue, return on the program, and your approvals." }
   }
+  const answerCro = (t: string): Msg => {
+    if (t.includes("risk"))
+      return { from: "ai", text: c.risks.length ? `${c.risks.length} partner deals are at risk (${money(c.riskValue)}):\n${c.risks.map((r) => `• ${r.account}, ${money(r.value)}: ${r.flags[0].label.charAt(0).toLowerCase()}${r.flags[0].label.slice(1)}`).join("\n")}` : "No partner deals are at risk.", links: [{ label: "Open deals at risk", href: "/v/risk" }] }
+    if (t.includes("conflict"))
+      return { from: "ai", text: c.openConflicts.length ? `${c.openConflicts.length} open:\n${c.openConflicts.map((x) => `• ${x.reg.customer}: ${x.partner} against ${x.reg.conflict!.owner}. Jordan Lee decides`).join("\n")}` : "No open channel conflicts.", links: [{ label: "Channel conflicts", href: "/v/conflicts" }] }
+    if (t.includes("close") || t.includes("quarter"))
+      return { from: "ai", text: `${money(c.closingValue)} of North America partner pipeline is due to close this quarter, in ${c.closingQ4.length} deals. Biggest: ${[...c.closingQ4].sort((a, b) => b.value - a.value).slice(0, 3).map((d) => `${d.account} (${money(d.value)}, ${d.stage})`).join(", ")}.`, links: [{ label: "Pipeline", href: "/v/pipeline" }] }
+    if (t.includes("pipeline") || t.includes("big") || t.includes("stage"))
+      return { from: "ai", text: `Partners are on ${money(c.total)} of open pipeline: ${c.regions.map((r) => `${r.region} ${money(r.value)}`).join(", ")}. By stage: ${c.byStage.map((b) => `${b.stage} ${money(b.total)}`).join(", ")}.`, links: [{ label: "Pipeline", href: "/v/pipeline" }] }
+    return { from: "ai", text: "I can help with partner pipeline, deals at risk and channel conflicts. I see every partner deal; deciding stays with partner managers." }
+  }
+  const answerIt = (t: string): Msg => {
+    if (t.includes("need") || t.includes("today") || t.includes("approve"))
+      return { from: "ai", text: ad.tasks.length ? `${ad.tasks.length} things need you:\n${ad.tasks.map((x) => `• ${x.title}`).join("\n")}` : "Nothing needs you right now.", links: [{ label: "Go to Home", href: "/v/home" }] }
+    if (t.includes("sync") || t.includes("salesforce"))
+      return { from: "ai", text: `Sync lag is 1 min 40 s (target under 5 minutes). ${ad.writes.length - ad.retrying.length} of the last ${ad.writes.length} writes went through${ad.retrying.length ? `; ${ad.retrying.length} is retrying` : ""}.`, links: [{ label: "Connections", href: "/v/connections" }] }
+    if (t.includes("access") || t.includes("user") || t.includes("who"))
+      return { from: "ai", text: `${ad.provisioned} people have PRM access through ${state.groups.filter((x) => x.status === "mapped").length} Okta groups.${ad.newGroups.length ? ` ${ad.newGroups.map((x) => `${x.group} (${x.people} people) has no role yet`).join("; ")}.` : ""}${ad.leavers.length ? ` ${ad.leavers.map((u) => `${u.name} leaves on ${date(u.leavesOn!, { month: "short", day: "numeric" })}`).join("; ")}.` : ""}`, links: [{ label: "Users and roles", href: "/v/users" }] }
+    if (t.includes("audit") || t.includes("log"))
+      return { from: "ai", text: `The audit log has ${state.audit.length} lines. Latest:\n${state.audit.slice(0, 4).map((x) => `• ${x.actor}: ${x.text}`).join("\n")}`, links: [{ label: "Audit log", href: "/v/audit" }] }
+    return { from: "ai", text: "I can help with connections, field mappings, users and the audit log." }
+  }
+  const answerAi = (t: string): Msg => {
+    if (t.includes("override") || t.includes("look"))
+      return { from: "ai", text: g.overrides.length ? `${g.overrides.length} to review:\n${g.overrides.map((x) => `• ${agentRoster.find((a) => a.id === x.agent)?.name} on ${x.target}: ${x.detail ?? ""}`).join("\n")}` : "No overrides to review.", links: [{ label: "Overrides", href: "/v/activity/overrides" }] }
+    if (t.includes("cost") || t.includes("spend"))
+      return { from: "ai", text: `${money(g.month)} so far this month, ${Math.round((g.month / g.budget) * 100)}% of the ${money(g.budget)} budget. The Insights agent costs most (${money(388)}), up 41% on September.`, links: [{ label: "AI cost", href: "/v/cost" }] }
+    if (t.includes("dana") || t.includes("waiting") || t.includes("request"))
+      return { from: "ai", text: g.pending.length ? `${g.pending.length} waiting for Dana Ortiz:\n${g.pending.map((r) => `• ${r.title}`).join("\n")}` : "Nothing of yours is waiting for Dana.", links: [{ label: "Agents", href: "/v/agents" }] }
+    if (t.includes("today") || t.includes("did") || t.includes("agent"))
+      return { from: "ai", text: `${g.running} of ${g.roster.length} agents are running. Latest:\n${g.log.slice(0, 4).map((x) => `• ${agentRoster.find((a) => a.id === x.agent)?.name}: ${x.text} (${x.target})`).join("\n")}`, links: [{ label: "Agent activity", href: "/v/activity" }] }
+    return { from: "ai", text: "I can help with the agents' autonomy, their activity and overrides, and AI cost." }
+  }
   const answer = (q: string): Msg => {
     const t = q.toLowerCase()
-    return me.role === "revops" ? answerOps(t) : me.role === "ae" ? answerAe(t) : answerCeo(t)
+    const by = { revops: answerOps, ae: answerAe, ceo: answerCeo, cro: answerCro, it: answerIt, aisup: answerAi }
+    return by[me.role](t)
   }
   const send = (q: string) => {
     if (!q.trim()) return
@@ -186,10 +267,24 @@ function useAlerts(): Alert[] {
   const o = useOps()
   const s = useSeller()
   const e = useExec()
+  const c = useSales()
+  const ad = useAdmin()
+  const g = useAgents()
   return useMemo(() => {
     const out: Alert[] = []
-    if (me.role === "revops") {
-      for (const x of o.open) out.push({ id: x.id, title: x.title, body: `${exceptionKindLabel[x.kind]} · flagged by the ${x.source.toLowerCase()}`, href: `/v/exception/${x.id}`, tone: x.kind === "mismatch" ? "bad" : "warn" })
+    if (me.role === "cro") {
+      for (const r of c.risks.filter((x) => !x.underway && !x.nudges.length)) out.push({ id: `risk-${r.key}`, title: `${r.account} is at risk`, body: `${money(r.value)} · ${r.flags[0].label}`, href: "/v/risk", tone: r.flags[0].kind === "deadline" ? "bad" : "warn" })
+      for (const x of c.openConflicts) out.push({ id: `cf-${x.reg.id}`, title: `Channel conflict on ${x.reg.customer}`, body: `${x.partner} against ${x.reg.conflict!.owner} · Jordan Lee decides`, href: "/v/conflicts", tone: "info" })
+      for (const n of c.settled) out.push({ id: `ok-${n.id}`, title: `${n.account} is no longer at risk`, body: `After you asked ${n.toName}`, href: "/v/risk", tone: "ok" })
+    } else if (me.role === "it") {
+      for (const t of ad.tasks) out.push({ id: `t-${t.id}`, title: t.title, body: t.sub, href: t.href, tone: t.kind === "leaver" ? "bad" : "warn" })
+      for (const w of ad.retrying) out.push({ id: `w-${w.id}`, title: "A Salesforce write is retrying", body: w.text, href: "/v/connections", tone: "info" })
+    } else if (me.role === "aisup") {
+      for (const x of g.overrides) out.push({ id: `o-${x.id}`, title: `${x.who} overrode the ${agentRoster.find((a) => a.id === x.agent)?.name}`, body: `${x.target}: ${x.detail ?? x.text}`, href: "/v/activity/overrides", tone: "warn" })
+      for (const r of g.myRequests.filter((x) => x.status !== "pending")) out.push({ id: `r-${r.id}-${r.status}`, title: `Dana ${r.status}: ${r.title}`, body: r.note ?? (r.status === "approved" ? "It's in effect now" : "Nothing changed"), href: `/v/agent/${r.agent ?? "deal-desk"}`, tone: r.status === "approved" ? "ok" : "info" })
+      out.push({ id: "cost", title: "Insights agent cost is up 41%", body: `${money(g.month)} this month across all agents, of a ${money(g.budget)} budget`, href: "/v/cost", tone: "info" })
+    } else if (me.role === "revops") {
+      for (const x of o.open) out.push({ id: x.id, title: x.title, body: `${exceptionKindLabel[x.kind]} · flagged by the ${x.source}`, href: `/v/exception/${x.id}`, tone: x.kind === "mismatch" ? "bad" : "warn" })
       for (const r of o.myRequests.filter((x) => x.status !== "pending"))
         out.push({ id: `r-${r.id}-${r.status}`, title: `Dana ${r.status}: ${r.title}`, body: r.note ?? (r.status === "approved" ? "It's a new rules version now" : "Nothing changed"), href: "/v/programs", tone: r.status === "approved" ? "ok" : "info" })
       for (const x of state.crmIssues.filter((i) => i.reported && !o.open.some((ex) => ex.issueId === i.id)))
@@ -199,12 +294,16 @@ function useAlerts(): Alert[] {
       for (const c of state.cosell.filter((x) => x.decidedAt && x.decidedAt >= "2026-10-28"))
         out.push({ id: `cs-${c.id}-${c.status}`, title: `${partnerNameOf(state, c.partnerId)} ${c.status} your co-sell request`, body: c.status === "accepted" ? `${c.owner} owns it. The joint plan is ready` : c.declineReason ?? "", href: `/v/account/${c.accountId}`, tone: c.status === "accepted" ? "ok" : "info" })
       for (const { v, p } of s.dueSoon) out.push({ id: `p-${v.a.id}-${p.id}`, title: `${p.text}`, body: `${v.a.name} · due ${date(p.due)}`, href: `/v/account/${v.a.id}`, tone: "info" })
+      for (const n of state.croNudges.filter((x) => x.to === "seller" && x.toName === "Sam Rivera")) {
+        const acct = sellerAccounts.find((a) => a.name === n.account)
+        out.push({ id: `cro-${n.id}`, title: `Priya Shah (CRO) asked about ${n.account}`, body: n.text, href: acct ? `/v/account/${acct.id}` : "/v/home", tone: "warn" })
+      }
     } else {
       for (const x of e.pending) out.push({ id: x.id, title: x.title, body: `From ${x.from}${x.amount ? ` · ${money(x.amount)}` : ""}`, href: `/v/approval/${x.id}`, tone: "warn" })
       out.push({ id: "q4", title: "Weekly update: partner revenue", body: `${money(e.rev.won)} verified this year · ${e.roi.toFixed(1)}x return on the program`, href: "/v/home", tone: "info" })
     }
     return out
-  }, [me.role, o, s, e, state])
+  }, [me.role, o, s, e, c, ad, g, state])
 }
 
 function Notifications() {
@@ -250,11 +349,26 @@ function VendorSearch({ autoFocus, onDone }: { autoFocus?: boolean; onDone?: () 
   const { me } = useVendor()
   const s = useSeller()
   const e = useExec()
+  const c = useSales()
+  const g = useAgents()
   const [q, setQ] = useState("")
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   const t = q.trim().toLowerCase()
-  const hits = !t ? [] : me.role === "revops"
+  const hits = !t ? [] : me.role === "cro"
+    ? c.deals.filter((d) => `${d.account} ${d.partners.join(" ")} ${d.owner ?? ""}`.toLowerCase().includes(t)).slice(0, 6).map((d) => ({ key: d.key, title: d.account, sub: `${d.stage} · ${money(d.value)} · ${d.partners.join(", ")}`, href: c.risks.some((r) => r.account === d.account) ? "/v/risk" : "/v/pipeline" }))
+    : me.role === "it"
+      ? [
+          ...state.staff.filter((u) => `${u.name} ${u.role} ${u.group}`.toLowerCase().includes(t)).map((u) => ({ key: u.id, title: u.name, sub: `${u.role} · ${u.group}`, href: "/v/users" })),
+          ...state.mappings.filter((m) => `${m.prm} ${m.target}`.toLowerCase().includes(t)).map((m) => ({ key: m.id, title: `${m.prm} → ${m.target.split(" (")[0]}`, sub: `Field mapping · ${m.status}`, href: "/v/mappings" })),
+          ...state.audit.filter((x) => `${x.actor} ${x.text}`.toLowerCase().includes(t)).slice(0, 4).map((x) => ({ key: x.id, title: x.text, sub: `${x.actor} · ${x.id}`, href: "/v/audit" })),
+        ].slice(0, 8)
+      : me.role === "aisup"
+        ? [
+            ...g.roster.filter((a) => `${a.name} ${a.job}`.toLowerCase().includes(t)).map((a) => ({ key: a.id, title: a.name, sub: `${a.level} · ${a.job}`, href: `/v/agent/${a.id}` })),
+            ...g.log.filter((x) => `${x.target} ${x.text}`.toLowerCase().includes(t)).slice(0, 4).map((x) => ({ key: x.id, title: x.target, sub: x.text, href: "/v/activity" })),
+          ]
+        : me.role === "revops"
     ? [
         ...state.exceptions.filter((x) => x.title.toLowerCase().includes(t)).map((x) => ({ key: x.id, title: x.title, sub: `${exceptionKindLabel[x.kind]} · ${x.status}`, href: `/v/exception/${x.id}` })),
         ...state.ledger.filter((l) => l.account.toLowerCase().includes(t)).slice(0, 4).map((l) => ({ key: l.id, title: l.account, sub: `Ledger ${l.id} · ${money(l.amount)}`, href: "/v/revenue" })),
@@ -262,7 +376,7 @@ function VendorSearch({ autoFocus, onDone }: { autoFocus?: boolean; onDone?: () 
     : me.role === "ae"
       ? s.views.filter((v) => `${v.a.name} ${v.a.industry}`.toLowerCase().includes(t)).map((v) => ({ key: v.a.id, title: v.a.name, sub: `${v.a.stage} · ${money(v.a.value)}`, href: `/v/account/${v.a.id}` }))
       : e.rev.all.filter((p) => p.name.toLowerCase().includes(t)).slice(0, 6).map((p) => ({ key: p.id, title: p.name, sub: `${p.tier} ${p.program.toLowerCase()} · ${money(p.won)} verified`, href: "/v/revenue" }))
-  const placeholder = me.role === "revops" ? "Search exceptions and the ledger" : me.role === "ae" ? "Search your accounts" : "Search partners"
+  const placeholder = { revops: "Search exceptions and the ledger", ae: "Search your accounts", ceo: "Search partners", cro: "Search partner deals", it: "Search users, mappings and the log", aisup: "Search agents and their actions" }[me.role]
   const pick = (href: string) => { go(href); setQ(""); setOpen(false); onDone?.() }
   return (
     <div ref={box} className="relative w-full max-w-[520px]" onBlur={(ev) => !box.current?.contains(ev.relatedTarget as Node) && setOpen(false)}>
@@ -298,15 +412,16 @@ function VendorSearch({ autoFocus, onDone }: { autoFocus?: boolean; onDone?: () 
 /* ---------- shell ---------- */
 
 function ShellInner({ section, children, onSignOut }: { section: string; children: ReactNode; onSignOut: () => void }) {
-  const { me, isCeo } = useVendor()
+  const { me } = useVendor()
   const nav = useNav()
   const action = useMainAction(me.role)
   const { ask } = useVendorAssistant()
   const { resolvedTheme, setTheme } = useTheme()
   const [searching, setSearching] = useState(false)
   const mobile = nav.filter((n) => n.mobile)
-  // The CFO's main action is already a tab; the others get a raised button in the middle of the phone bar.
-  const bar: NavItem[] = isCeo ? mobile : [...mobile.slice(0, Math.ceil(mobile.length / 2)), { key: action.key, label: action.short, href: action.href, icon: action.icon }, ...mobile.slice(Math.ceil(mobile.length / 2))]
+  // Where the main action is already a tab (CFO, CRO, AI supervisor), there's no raised button in the phone bar.
+  const flat = centerless(me.role)
+  const bar: NavItem[] = flat ? mobile : [...mobile.slice(0, Math.ceil(mobile.length / 2)), { key: action.key, label: action.short, href: action.href, icon: action.icon }, ...mobile.slice(Math.ceil(mobile.length / 2))]
 
   return (
     <div className="min-h-svh lg:grid lg:grid-cols-[264px_1fr]">
@@ -320,7 +435,7 @@ function ShellInner({ section, children, onSignOut }: { section: string; childre
           </span>
         </div>
         <div className="px-4 pb-3">
-          <Button size="lg" variant={isCeo ? "outline" : "default"} className="h-11 w-full justify-start gap-2.5 text-[15.5px]" onClick={() => go(action.href)}>
+          <Button size="lg" variant={flat ? "outline" : "default"} className="h-11 w-full justify-start gap-2.5 text-[15.5px]" onClick={() => go(action.href)}>
             <action.icon className="size-5" /> {action.label}
           </Button>
         </div>
@@ -389,7 +504,7 @@ function ShellInner({ section, children, onSignOut }: { section: string; childre
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 grid border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden" style={{ gridTemplateColumns: `repeat(${bar.length}, minmax(0, 1fr))` }}>
         {bar.map((n) => {
           const active = section === n.key
-          if (n.key === action.key && !isCeo)
+          if (n.key === action.key && !flat)
             return (
               <a key={n.key} href={`#${n.href}`} aria-current={active ? "page" : undefined} className="flex flex-col items-center gap-1 pt-1.5 pb-2 text-[13px] font-semibold text-primary">
                 <span className="-mt-5 grid size-12 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_16px_#0969da55]"><n.icon className="size-6" /></span>

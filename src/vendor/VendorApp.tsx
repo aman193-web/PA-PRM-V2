@@ -3,11 +3,11 @@ import { ArrowLeft, Check, KeyRound, Lock, X } from "lucide-react"
 import { EmptyState, PageHeader, Panel } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { go, useRoute } from "@/lib/router"
-import { JourneysView } from "@/screens/Journeys"
+import { JourneysView, type JourneysConfig } from "@/screens/Journeys"
 import { access, type VendorRoleId } from "@/vendor/data"
 import { VendorProvider, useVendor } from "@/vendor/useVendor"
 import { VendorShell } from "@/vendor/VendorShell"
-import { aeJourneys, ceoJourneys, opsJourneys } from "@/vendor/journeys"
+import { aeJourneys, aisupJourneys, ceoJourneys, croJourneys, itJourneys, opsJourneys } from "@/vendor/journeys"
 import { OpsHome } from "@/vendor/screens/ops/OpsHome"
 import { ExceptionDetail, Exceptions } from "@/vendor/screens/ops/Exceptions"
 import { Reconciliation } from "@/vendor/screens/ops/Reconciliation"
@@ -18,8 +18,21 @@ import { CoSellList, FindPartner } from "@/vendor/screens/ae/CoSell"
 import { CeoHome } from "@/vendor/screens/ceo/CeoHome"
 import { BoardView, ExecRevenue } from "@/vendor/screens/ceo/Revenue"
 import { ExecApprovalDetail, ExecApprovals } from "@/vendor/screens/ceo/Approvals"
+import { CroHome } from "@/vendor/screens/cro/CroHome"
+import { CroPipeline } from "@/vendor/screens/cro/Pipeline"
+import { CroRisk } from "@/vendor/screens/cro/Risk"
+import { CroConflicts } from "@/vendor/screens/cro/Conflicts"
+import { ItHome } from "@/vendor/screens/it/ItHome"
+import { ItConnections } from "@/vendor/screens/it/Connections"
+import { ItMappings } from "@/vendor/screens/it/Mappings"
+import { ItUsers } from "@/vendor/screens/it/Users"
+import { ItAudit } from "@/vendor/screens/it/Audit"
+import { AiHome } from "@/vendor/screens/aisup/AiHome"
+import { AgentDetail, AiAgents } from "@/vendor/screens/aisup/Agents"
+import { AiActivity } from "@/vendor/screens/aisup/Activity"
+import { AiCost } from "@/vendor/screens/aisup/Cost"
 
-const journeys = { revops: opsJourneys, ae: aeJourneys, ceo: ceoJourneys }
+const journeys: Record<VendorRoleId, JourneysConfig> = { revops: opsJourneys, ae: aeJourneys, ceo: ceoJourneys, cro: croJourneys, it: itJourneys, aisup: aisupJourneys }
 
 /** What this person can and can't do, from the PRM Knowledge Hub's persona pages and permission matrix. */
 function VendorAccess() {
@@ -93,12 +106,45 @@ function ceoScreen(page: string, id?: string): [string, ReactNode] {
   }
 }
 
+function croScreen(page: string): [string, ReactNode] {
+  switch (page) {
+    case "pipeline": return ["pipeline", <CroPipeline />]
+    case "risk": return ["risk", <CroRisk />]
+    case "conflicts": return ["conflicts", <CroConflicts />]
+    case "approvals": case "approval": case "programs": case "exceptions": return ["home", <NotForRole what="Decisions and rules" why="Registrations and conflicts are decided by partner managers, and program rules by the channel chief. You see every partner deal and can ask the person who can act." />]
+    default: return ["home", <CroHome />]
+  }
+}
+
+function itScreen(page: string, id?: string): [string, ReactNode] {
+  switch (page) {
+    case "connections": return ["connections", <ItConnections />]
+    case "mappings": return ["mappings", <ItMappings />]
+    case "users": return ["users", <ItUsers />]
+    case "audit": return ["audit", <ItAudit tab={id} />]
+    case "revenue": case "pipeline": case "programs": case "approvals": return ["home", <NotForRole what="Revenue, rules and decisions" why="IT sees what support needs. Program rules, credit and partner decisions stay with RevOps, the channel chief and partner managers." />]
+    default: return ["home", <ItHome />]
+  }
+}
+
+function aisupScreen(page: string, id?: string): [string, ReactNode] {
+  switch (page) {
+    case "agents": return ["agents", <AiAgents />]
+    case "agent": return ["agents", <AgentDetail id={id} />]
+    case "activity": return ["activity", <AiActivity tab={id} />]
+    case "cost": return ["cost", <AiCost />]
+    case "approvals": case "approval": return ["home", <NotForRole what="Approvals" why="Raising autonomy is approved by the channel chief, and the business decisions agents raise stay with their owners." />]
+    default: return ["home", <AiHome />]
+  }
+}
+
 function useScreen(role: VendorRoleId) {
   const { parts } = useRoute()
   const [, page = "home", id] = parts
   if (page === "access") return { section: "access", screen: <VendorAccess /> }
   if (page === "journeys") return { section: "journeys", screen: <JourneysView c={journeys[role]} /> }
-  const [section, screen] = role === "revops" ? opsScreen(page, id) : role === "ae" ? aeScreen(page, id) : ceoScreen(page, id)
+  const by = { revops: opsScreen, ae: aeScreen, ceo: ceoScreen, cro: croScreen, it: itScreen, aisup: aisupScreen }
+  const [section, screen] = by[role](page, id)
   return { section, screen }
 }
 
@@ -112,7 +158,7 @@ function Inner({ role, onSignOut }: { role: VendorRoleId; onSignOut: () => void 
   )
 }
 
-/** Three more Brightline portals in one app: RevOps, the field seller and the CFO. Routes live under #/v/. */
+/** Six more Brightline portals in one app: RevOps, the field seller, the CFO, the CRO, IT and the AI supervisor. Routes live under #/v/. */
 export function VendorApp({ role, onSignOut }: { role: VendorRoleId; onSignOut: () => void }) {
   return (
     <VendorProvider role={role}>

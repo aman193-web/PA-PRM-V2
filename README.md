@@ -1,6 +1,6 @@
-# PRM · nine-portal prototype
+# PRM · twelve-portal prototype
 
-A clickable prototype of the PRM with nine portals, each showing only what that person may see and do:
+A clickable prototype of the PRM with twelve portals, one for each persona in the BRD. Each shows only what that person may see and do:
 
 | Portal | Person | Routes | Spec |
 |---|---|---|---|
@@ -9,6 +9,9 @@ A clickable prototype of the PRM with nine portals, each showing only what that 
 | RevOps | Ana Costa (Brightline) | `#/v/…` | [docs/Brightline_Portals_Spec.md](docs/Brightline_Portals_Spec.md) §2 |
 | Field seller | Sam Rivera (Brightline) | `#/v/…` | [docs/Brightline_Portals_Spec.md](docs/Brightline_Portals_Spec.md) §3 |
 | CEO / CFO | Morgan Hale (Brightline) | `#/v/…` | [docs/Brightline_Portals_Spec.md](docs/Brightline_Portals_Spec.md) §4 |
+| CRO / VP Sales | Priya Shah (Brightline) | `#/v/…` | [docs/Brightline_Portals_Spec.md](docs/Brightline_Portals_Spec.md) §5 |
+| IT / CRM admin | Kai Brennan (Brightline) | `#/v/…` | [docs/Brightline_Portals_Spec.md](docs/Brightline_Portals_Spec.md) §6 |
+| AI supervisor | Lee Park (Brightline) | `#/v/…` | [docs/Brightline_Portals_Spec.md](docs/Brightline_Portals_Spec.md) §7 |
 | Partner executive | Paul Okafor (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
 | Partner sales rep | Marcus Bell (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
 | Partner marketer | Priya Raman (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §8 |
@@ -68,3 +71,6 @@ There's a map of these journeys inside the app at **The three journeys** (sideba
 - A partner manager sees only the partners assigned to them in full. Other partners show by name only, and their commercial terms are hidden.
 - Registrations past 80% of the SLA alert the channel chief. Split overrides and escalated applications go to the channel chief too.
 - Co-sell (J-03) is Stage 2. It's designed in the field seller's portal, and partners answer it from their Leads page.
+- The CRO sees every partner deal but decides nothing; it can ask the person who can act. IT sees what support needs, not program rules or credit.
+- AI agents act within the level the AI supervisor sets for each action. Lowering is immediate; raising needs the channel chief; money, contracts, access, export, demotion and termination always need a person.
+- Every action, from every portal, lands in one append-only audit log that IT reads.

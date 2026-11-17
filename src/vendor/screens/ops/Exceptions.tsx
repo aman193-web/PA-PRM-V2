@@ -103,7 +103,7 @@ export function ExceptionDetail({ id = "" }: { id?: string }) {
       <PageHeader
         back={{ label: "Exceptions", href: "/v/exceptions" }}
         title={<span className="flex flex-wrap items-center gap-3">{x.title} <StatusBadge x={x} /></span>}
-        sub={<>{exceptionKindLabel[x.kind]} · flagged by the {x.source.toLowerCase()} {ago(x.found)}{x.partnerId ? ` · ${partnerNameOf(state, x.partnerId)}` : ""}</>}
+        sub={<>{exceptionKindLabel[x.kind]} · flagged by the {x.source} {ago(x.found)}{x.partnerId ? ` · ${partnerNameOf(state, x.partnerId)}` : ""}</>}
       />
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <div className="space-y-6">
