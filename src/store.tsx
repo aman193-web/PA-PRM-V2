@@ -133,6 +133,9 @@ const initial: State = {
     { id: "pf10", at: "2026-10-27T10:21:00", text: "Kestrel Energy is with Jordan Lee for review. You're named for the solution design", href: "/p/work/ENG-4", rep: "Raj Mehta", companyId: "northpeak" },
     { id: "pf11", at: "2026-10-24T16:30:00", text: "Your statement of work on Harborview Logistics was recorded as a touch", href: "/p/work/ENG-1", rep: "Raj Mehta", companyId: "northpeak" },
     { id: "pf12", at: "2026-10-22T17:00:00", text: "You finished the Grid analytics course. The exam is next", href: "/p/skills", rep: "Raj Mehta", companyId: "northpeak" },
+    { id: "pf13", at: "2026-10-27T16:00:00", text: "Marcus Bell asked you to run the platform workshop for Copperline Mining", href: "/p/work/ENG-7", rep: "Theo Grant" },
+    { id: "pf14", at: "2026-10-20T12:00:00", text: "You finished the Platform course. Pass the exam and Ridgeway has its certified technical lead", href: "/p/skills", rep: "Theo Grant" },
+    { id: "pf15", at: "2026-10-14T11:30:00", text: "Your Northgate Retail demo was recorded as a touch", href: "/p/work/ENG-6", rep: "Theo Grant" },
   ],
   requests: requestsSeed,
   assignments: [],
@@ -297,6 +300,8 @@ const AISUP = "Lee Park"
 const agentName = (id: string) => agentRoster.find((x) => x.id === id)?.name ?? agentSeed.find((x) => x.id === id)?.name ?? id
 const chiefLog = (s: State, text: string, href?: string): ActivityItem[] => [{ id: `c${Date.now()}${Math.random()}`, at: stamp(), text, href }, ...s.chiefFeed]
 const item = (list: ActivityItem[], text: string, href?: string): ActivityItem[] => [{ id: `v${Date.now()}${Math.random()}`, at: stamp(), text, href }, ...list]
+/** The partner company a technical lead works for, from the deals they're on (Raj at Northpeak, Theo at Ridgeway). */
+const companyOfLead = (s: State, person: string) => s.engagements.find((e) => e.person === person)?.companyId ?? "northpeak"
 const daysTo = (iso: string) => Math.ceil((new Date(`${iso}T12:00:00`).getTime() - NOW.getTime()) / 86_400_000)
 
 /** Role-based split (the launch default suggested in D8): role weights, normalised to 100. */
@@ -746,14 +751,22 @@ function core(s: State, a: Action): State {
     }
     case "passExam": {
       const k = s.skills.find((x) => x.id === a.skillId)!
+      const co = companyOfLead(s, k.person)
+      const ridgeway = co === "ridgeway"
       return {
         ...s,
         skills: s.skills.map((x) => (x.id === a.skillId ? {
           ...x, level: "Certified", course: undefined, expires: addDays(NOW.toISOString().slice(0, 10), 730),
           evidence: [...x.evidence, { level: "Certified", text: `${x.product} technical certification exam (86%)`, at: NOW.toISOString().slice(0, 10) }],
-          next: `Sell-Ready when you deliver a workshop, design or pilot on a ${x.product} deal${x.needFor ? " such as Kestrel Energy" : ""}.`, needFor: undefined,
+          next: `Sell-Ready when you deliver a workshop, design or pilot on a ${x.product} deal${x.needFor ? (ridgeway ? " such as Copperline Mining" : " such as Kestrel Energy") : ""}.`, needFor: undefined,
         } : x)),
-        partnerFeed: feed(s, `You're certified in ${k.product}. Northpeak's capability score went up`, "/p/skills", k.person, "northpeak"),
+        partnerFeed: ridgeway
+          ? [
+              ...feed(s, `You're certified in ${k.product}. Ridgeway now has its certified technical lead for Platinum`, "/p/skills", k.person, co),
+              ...feed(s, `${k.person} passed the ${k.product} exam: Ridgeway has a certified technical lead for Platinum`, "/p/program", "Paul Okafor", co).slice(0, 1),
+            ]
+          : feed(s, `You're certified in ${k.product}. ${partnerName(s, co).split(" ")[0]}'s capability score went up`, "/p/skills", k.person, co),
+        notices: notice(s, `${k.person} (${partnerName(s, co)}) is certified in ${k.product}`, "Brightline's partner ranking counts it straight away", `/partner/${co}`),
       }
     }
 
@@ -1173,8 +1186,11 @@ function auditOf(s: State, a: Action): Audit | null {
     case "handOffLead": return P(at(a.by), "Partners", `Handed a campaign lead to ${a.rep}`)
     case "requestMdf": return P(at(a.req.requestedBy, a.req.companyId), "Credit", `Asked for ${money(a.req.amount)} of marketing funds`)
     case "claimMdf": return P(at("Priya Raman"), "Credit", `Claimed ${money(a.amount)} of marketing funds`)
-    case "logMilestone": return P(at(a.by, "northpeak"), "Credit", `Logged a delivery milestone: ${a.kind}`)
-    case "passExam": return P(at(s.skills.find((k) => k.id === a.skillId)?.person ?? "Raj Mehta", "northpeak"), "Partners", `Passed the ${s.skills.find((k) => k.id === a.skillId)?.product} exam`)
+    case "logMilestone": return P(at(a.by, s.engagements.find((e) => e.id === a.engagementId)?.companyId), "Credit", `Logged a delivery milestone: ${a.kind}`)
+    case "passExam": {
+      const k = s.skills.find((x) => x.id === a.skillId)
+      return P(at(k?.person ?? "Raj Mehta", companyOfLead(s, k?.person ?? "")), "Partners", `Passed the ${k?.product} exam`)
+    }
     case "resolveException": return P(OPS, "Data", `${s.exceptions.find((e) => e.id === a.id)?.title}: chose "${s.exceptions.find((e) => e.id === a.id)?.options.find((o) => o.id === a.choice)?.label}"`)
     case "proposeRule": return P(OPS, "Programs", `Asked for: ${a.req.title}`)
     case "sendCoSell": return P(SELLER, "Deals", `Sent ${partnerName(s, a.req.partnerId)} a co-sell request`)

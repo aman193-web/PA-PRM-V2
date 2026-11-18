@@ -1,6 +1,6 @@
 # PRM · twelve-portal prototype
 
-A clickable prototype of the PRM with twelve portals, one for each persona in the BRD. Each shows only what that person may see and do:
+A clickable prototype of the PRM with a portal for each of the twelve personas in the BRD. The partner technical lead is shown at both partner companies. Each portal shows only what that person may see and do:
 
 | Portal | Person | Routes | Spec |
 |---|---|---|---|
@@ -15,6 +15,7 @@ A clickable prototype of the PRM with twelve portals, one for each persona in th
 | Partner executive | Paul Okafor (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
 | Partner sales rep | Marcus Bell (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) |
 | Partner marketer | Priya Raman (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §8 |
+| Partner technical lead | Theo Grant (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §9 |
 | Partner technical lead | Raj Mehta (Northpeak Consulting) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §9 |
 
 The app opens on a demo-only **Choose a portal** page.

@@ -892,6 +892,7 @@ export const opportunities: Opportunity[] = [
       { id: "t1", at: "2026-08-04T09:00:00", partnerId: "northpeak", kind: "Registration", text: "Registered the deal (REG-1755)", by: "Hannah Cho" },
       { id: "t2", at: "2026-08-19T14:00:00", partnerId: "northpeak", kind: "Workshop", text: "Ran the discovery workshop with the CIO and fleet team", by: "Raj Mehta" },
       { id: "t3", at: "2026-09-30T11:00:00", partnerId: "ridgeway", kind: "Commercial", text: "Handled pricing and procurement paperwork" },
+      { id: "t3b", at: "2026-10-01T15:00:00", partnerId: "ridgeway", kind: "Other", text: "Sized licences for 400 drivers", by: "Theo Grant" },
       { id: "t4", at: "2026-10-08T15:00:00", partnerId: "bluefin", kind: "Demo", text: "Integration demo with the customer's cloud team" },
       { id: "t5", at: "2026-10-21T10:00:00", partnerId: "northpeak", kind: "Meeting", text: "Executive alignment meeting; built the rollout plan", by: "Hannah Cho" },
       { id: "t6", at: "2026-10-24T16:00:00", partnerId: "northpeak", kind: "Design sign-off", text: "Wrote the implementation statement of work", by: "Raj Mehta" },
@@ -905,8 +906,22 @@ export const opportunities: Opportunity[] = [
     touches: [
       { id: "t1", at: "2026-09-12T10:00:00", partnerId: "ridgeway", kind: "Registration", text: "Registered the renewal (REG-1880)" },
       { id: "t2", at: "2026-10-02T13:00:00", partnerId: "atlas", kind: "Delivery", text: "Delivered the dashboard migration milestone" },
+      { id: "t2b", at: "2026-10-14T11:00:00", partnerId: "ridgeway", kind: "Workshop", text: "Demoed the new store dashboards", by: "Theo Grant" },
       { id: "t3", at: "2026-10-19T09:00:00", partnerId: "ridgeway", kind: "Meeting", text: "Renewal review with the customer's finance lead" },
     ],
+  },
+  {
+    // Ridgeway's hospitality win (REG-1612). Theo Grant's workshop and go-live are the delivery evidence.
+    id: "006Q8000013LksH", name: "Lakeshore Hotels – Guest analytics", account: "Lakeshore Hotels", value: 124000,
+    stage: "Closed won", closeDate: "2026-09-18", owner: "Priya Nair",
+    lines: [{ partnerId: "ridgeway", role: "Sourced", share: 100 }],
+    splitSource: "model", versions: [],
+    touches: [
+      { id: "t1", at: "2026-05-04T10:00:00", partnerId: "ridgeway", kind: "Registration", text: "Registered the deal (REG-1612)", by: "Marcus Bell" },
+      { id: "t2", at: "2026-06-20T14:00:00", partnerId: "ridgeway", kind: "Workshop", text: "Guest analytics workshop with the revenue team", by: "Theo Grant" },
+      { id: "t3", at: "2026-09-10T09:00:00", partnerId: "ridgeway", kind: "Go-live", text: "Went live across 12 hotels", by: "Theo Grant" },
+    ],
+    reconciliation: "matched", reconciliationNote: "Matches Salesforce closed-won: $124,000",
   },
   {
     id: "006Q8000020BrkS", name: "Brookside Bank – Analytics", account: "Brookside Bank", value: 120000,

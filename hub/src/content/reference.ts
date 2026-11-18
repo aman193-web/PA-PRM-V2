@@ -76,7 +76,7 @@ export const glossary: Item[] = [
   status: "specified" as const, sources: [{ doc: "BRD" as const }, { doc: "Deck" as const }], tags: ["what is", "meaning", "define"],
 }))
 
-/** The twelve portals built in the prototype, one per persona, kept here so the hub tracks what's been designed. */
+/** The portals built in the prototype, one per persona plus Ridgeway's own technical lead, kept here so the hub tracks what's been designed. */
 export const portals: { persona: string; role: string; person: string; org: string; stage: string; screens: string[]; added: string[] }[] = [
   { persona: "pam", role: "Partner manager", person: "Jordan Lee", org: "Brightline", stage: "1A",
     screens: ["Home", "Review queue (decide, extensions, waiting on partner)", "Deals & leads", "Partners, applications and onboarding", "Credit splits", "Salesforce sync", "Partner health (Stage 2)", "Three journeys"],
@@ -114,4 +114,7 @@ export const portals: { persona: string; role: string; person: string; org: stri
   { persona: "tech", role: "Partner technical lead", person: "Raj Mehta", org: "Northpeak Consulting", stage: "2",
     screens: ["Home (influenced revenue)", "Deals he works on, with joint plans", "Log a milestone", "Skills ladder and company capability", "Influence and credit", "Resources", "Three journeys", "Your access"],
     added: ["Milestones logged only once a deal has an opportunity (G40)"] },
+  { persona: "tech", role: "Partner technical lead", person: "Theo Grant", org: "Ridgeway IT", stage: "2",
+    screens: ["The same portal as Raj Mehta, on Ridgeway's deals: home, deals worked, log a milestone, skills, influence, resources"],
+    added: ["A technical lead at a reseller too, beside the persona doc's services-partner lead (G41)", "Passing an exam meets Ridgeway's Platinum requirement for a certified technical lead"] },
 ]

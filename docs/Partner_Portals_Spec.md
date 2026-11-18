@@ -14,9 +14,12 @@
 - **Paul Okafor, CEO:** the partner executive.
 - **Marcus Bell, partner sales lead:** the sales rep.
 - **Priya Raman, marketing manager:** the partner marketer (sections 8 and 10).
+- **Theo Grant, pre-sales engineer:** Ridgeway's partner technical lead (section 9). Added 18 Nov 2026.
 - **Jordan Lee:** their partner manager at Brightline.
 
-**Second example company:** Northpeak Consulting, a Platinum services partner. **Raj Mehta, solutions architect**, is the partner technical lead (sections 9 and 10), as in the persona document. Hannah Cho is Northpeak's admin.
+**Second example company:** Northpeak Consulting, a Platinum services partner. **Raj Mehta, solutions architect**, is its partner technical lead (sections 9 and 10), as in the persona document. Hannah Cho is Northpeak's admin.
+
+The technical lead is shown at both companies, so the role can be seen at a reseller and at a services partner (G41). The marketer is at Ridgeway only.
 
 ---
 
@@ -255,6 +258,19 @@ These are tagged in the UI where they appear:
 
 **Screens:** Home · Deals you work on and deal detail (joint plan, delivery timeline, Northpeak's credit) · Log a milestone · Skills (ladder, evidence, exam, company capability) · Influence · Resources (technical, no pricing) · Your access · Three journeys.
 
+### 9a. Ridgeway's technical lead (Theo Grant, pre-sales engineer)
+
+The same portal and access as Raj, scoped to Ridgeway. Each person sees only their own company's deals, credit and capability. Invited by Paul Okafor.
+
+| | Theo Grant at Ridgeway |
+|---|---|
+| Deals worked | Lakeshore Hotels (won; workshop and go-live), Northgate Retail (renewal demo), Copperline Mining (platform workshop due), Harborview Logistics (Ridgeway as reseller beside two other partners), Acme Manufacturing (in review, so nothing can be logged yet) |
+| Influenced revenue | $124,000 (Lakeshore Hotels) |
+| Skills | Platform: course finished, exam next. Analytics: course 70% |
+| Why it matters to Ridgeway | Platinum needs one certified technical lead. Passing the Platform exam meets it on Paul's Program page straight away |
+
+**Demo flow:** as Theo, pass the Platform exam, then log the Copperline Mining workshop. Theo becomes Sell-Ready in Platform. Paul's Program page counts the certified technical lead, and Jordan sees the touch on the opportunity.
+
 ---
 
 ## 10. What syncs across portals (marketer and technical lead)
@@ -268,10 +284,12 @@ These are tagged in the UI where they appear:
 | Dana decides | Priya: Funds, notifications and Home |
 | Raj logs a milestone | Jordan: the opportunity's partner touches ("logged by Raj Mehta") and a notice |
 | Raj passes an exam or logs delivery | Raj: skills ladder and Northpeak's capability score |
+| Theo passes an exam | Theo: skills ladder. Paul: Program → certified technical lead met, and Recent. Jordan: a notice |
+| Theo logs a milestone | Jordan: the opportunity's partner touches and a notice. Theo: Sell-Ready once certified |
 
 **Added beyond the documents (tagged in the UI):** the AI rep suggestion for campaign leads, and the Program agent's check on the intro for unapproved claims.
 
-**Decisions recorded in the hub:** G37 (the channel chief approves funds), G38 (campaign leads stay with the partner), G39 (how a campaign lead reaches a rep), G40 (log only once there's an opportunity) and G41 (the technical lead works at a services partner).
+**Decisions recorded in the hub:** G37 (the channel chief approves funds), G38 (campaign leads stay with the partner), G39 (how a campaign lead reaches a rep), G40 (log only once there's an opportunity) and G41 (the technical lead is shown at both a services partner and a reseller).
 
-**Not designed here:** asset engagement reporting and email opens (Impartner slide 6), Northpeak's own executive portal (Paul's portal shows that role), and a technical lead at a reseller (Ridgeway's Theo Grant is invited but not yet active).
+**Not designed here:** asset engagement reporting and email opens (Impartner slide 6), and Northpeak's own executive portal (Paul's portal shows that role).
 

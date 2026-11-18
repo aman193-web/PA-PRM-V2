@@ -6,7 +6,7 @@ import { useTheme } from "@/lib/theme"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
 
-export type DemoRole = "pam" | "chief" | "revops" | "ae" | "ceo" | "cro" | "it" | "aisup" | "pexec" | "rep" | "mkt" | "tech"
+export type DemoRole = "pam" | "chief" | "revops" | "ae" | "ceo" | "cro" | "it" | "aisup" | "pexec" | "rep" | "mkt" | "tech" | "techr"
 
 interface RoleCard {
   id: DemoRole
@@ -39,6 +39,7 @@ const sides: { key: string; label: string; org: string; icon: typeof Building2; 
       { id: "pexec", name: "Paul Okafor", initials: "PO", role: "Partner executive", org: "Ridgeway IT", job: "Sees revenue, assigns leads, manages the team", tint: "bg-amber-soft text-amber-ink" },
       { id: "rep", name: "Marcus Bell", initials: "MB", role: "Partner sales rep", org: "Ridgeway IT", job: "Registers deals and sees their own credit", tint: "bg-brand-soft text-primary" },
       { id: "mkt", name: "Priya Raman", initials: "PR", role: "Partner marketer", org: "Ridgeway IT", job: "Runs campaigns and requests marketing funds", tint: "bg-ok-soft text-ok" },
+      { id: "techr", name: "Theo Grant", initials: "TG", role: "Partner technical lead", org: "Ridgeway IT", job: "Runs demos and pilots and logs delivery for credit", tint: "bg-secondary text-foreground" },
       { id: "tech", name: "Raj Mehta", initials: "RM", role: "Partner technical lead", org: "Northpeak Consulting", job: "Gets certified and logs delivery for credit", tint: "bg-secondary text-foreground" },
     ],
   },
@@ -98,9 +99,9 @@ export function Welcome({ onPick }: { onPick: (r: DemoRole) => void }) {
         <h1 className="text-[26px] leading-tight font-bold sm:text-[28px]">Choose a portal</h1>
         <p className="mt-1 text-[15.5px] text-muted-foreground">Pick a role to sign in. What you do in one portal shows up in the others.</p>
 
-        <div className="mt-5 grid items-start gap-4 lg:grid-cols-3">
+        <div className="mt-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)]">
           {sides.map((s) => (
-            <section key={s.key} className={cn("rounded-[16px] border bg-surface-2/60 p-3 sm:p-4", s.key === "vendor" && "lg:col-span-2")}>
+            <section key={s.key} className={cn("rounded-[16px] border bg-surface-2/60 p-3 sm:p-4", s.key === "vendor" && "lg:col-span-1")}>
               <h2 className="mb-2.5 flex items-baseline gap-2 px-1">
                 <s.icon className="size-4 translate-y-0.5 text-muted-foreground" />
                 <span className="shrink-0 text-[16px] font-semibold">{s.label}</span>

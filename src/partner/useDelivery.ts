@@ -2,7 +2,7 @@ import { useMemo } from "react"
 import type { CreditLine, Opportunity, Registration, Touch } from "@/data/model"
 import { NOW } from "@/lib/format"
 import { useStore } from "@/store"
-import { ladder, northpeakOthers, type Engagement, type JointTask } from "@/partner/delivery"
+import { ladder, othersByCompany, type Engagement, type JointTask } from "@/partner/delivery"
 import { usePartner } from "@/partner/usePartner"
 
 const sum = (xs: number[]) => xs.reduce((n, x) => n + x, 0)
@@ -61,7 +61,7 @@ export function useDelivery() {
     const overdue = tasks.filter((x) => x.t.due < TODAY)
     const thisWeek = tasks.filter((x) => x.t.due >= TODAY && x.t.due <= "2026-11-03")
     const skills = state.skills.filter((k) => k.person === me.name)
-    const capability = northpeakOthers.map((p) => {
+    const capability = (othersByCompany[company.id] ?? []).map((p) => {
       const mine = skills.find((k) => k.product === p.product)
       const rank = mine ? ladder.indexOf(mine.level) : -1
       return { ...p, certified: p.certified + (rank >= 1 ? 1 : 0), proven: p.proven + (rank === 3 ? 1 : 0) }

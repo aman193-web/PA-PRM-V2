@@ -8,7 +8,10 @@ import { usePartner } from "@/partner/usePartner"
 /** What this role can and can't do, straight from the BRD permission matrix (via the PRM Knowledge Hub). */
 export function Access() {
   const { me, company, isExec } = usePartner()
-  const a = access[me.role]
+  // The technical lead's lines name Northpeak; Ridgeway's technical lead sees Ridgeway and its admin instead.
+  const own = (t: string) => t.replace(/Hannah Cho/g, company.admin).replace(/Northpeak/g, company.short)
+  const base = access[me.role]
+  const a = { can: base.can.map((l) => ({ ...l, text: own(l.text) })), cannot: base.cannot.map((l) => ({ ...l, text: own(l.text) })) }
   return (
     <div className="space-y-6">
       <PageHeader title="Your access" sub={`${me.name} · ${me.roleLabel} at ${company.name}. The platform enforces this for people, APIs and AI agents alike, not just on screen.`} />

@@ -8,14 +8,14 @@ import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
 import { benefitsNow, company, nextTier, tierLadder } from "@/partner/data"
 import { StageTag } from "@/partner/bits"
+import { tierRequirements } from "@/partner/usePartner"
 import { mdfSummary } from "@/partner/useMarketing"
 import { FundsBar } from "@/partner/screens/mkt/Funds"
 
 export function Program() {
   const { state, dispatch } = useStore()
   const at = tierLadder.indexOf(company.tier as (typeof tierLadder)[number])
-  const certified = state.team.filter((m) => m.certified && m.status === "active").length
-  const reqs = nextTier.requirements.map((r) => (r.label === "Certified sales reps" ? { ...r, have: certified } : r))
+  const reqs = tierRequirements(state)
   const met = reqs.filter((r) => r.have >= r.need).length
   const funds = mdfSummary(state, company.id)
   const latest = funds.all[0]

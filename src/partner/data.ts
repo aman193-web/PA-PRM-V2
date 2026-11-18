@@ -2,6 +2,8 @@
 // Access lists mirror the PRM Knowledge Hub's permission matrix for each role.
 
 export type PartnerRoleId = "pexec" | "rep" | "mkt" | "tech"
+/** Who signs in. Both technical leads use the same portal: Raj at Northpeak ("tech"), Theo at Ridgeway ("techr"). */
+export type PartnerPersonaId = PartnerRoleId | "techr"
 
 export interface PartnerCompany {
   id: string
@@ -26,8 +28,8 @@ export interface PartnerPerson {
   roleLabel: string
 }
 
-// Three personas work at Ridgeway IT (a Gold reseller). The technical lead works at Northpeak Consulting,
-// a Platinum services partner, as in the persona document: services partners deliver the implementations.
+// Ridgeway IT (a Gold reseller) has all four partner roles. The persona document's technical lead, Raj Mehta, works at
+// Northpeak Consulting, a Platinum services partner; Ridgeway's own technical lead, Theo Grant, is added (G41).
 export const companies: Record<string, PartnerCompany> = {
   ridgeway: { id: "ridgeway", name: "Ridgeway IT", short: "Ridgeway", tier: "Gold", program: "Reseller", vendor: "Brightline", region: "North America · Central", admin: "Paul Okafor" },
   northpeak: { id: "northpeak", name: "Northpeak Consulting", short: "Northpeak", tier: "Platinum", program: "Services", vendor: "Brightline", region: "North America · East", admin: "Hannah Cho" },
@@ -36,11 +38,12 @@ export const companies: Record<string, PartnerCompany> = {
 /** Ridgeway IT: the company the executive, sales rep and marketer work for. */
 export const company = companies.ridgeway
 
-export const people: Record<PartnerRoleId, PartnerPerson> = {
+export const people: Record<PartnerPersonaId, PartnerPerson> = {
   pexec: { role: "pexec", companyId: "ridgeway", name: "Paul Okafor", first: "Paul", initials: "PO", title: "CEO", email: "paul@ridgewayit.com", roleLabel: "Partner executive" },
   rep: { role: "rep", companyId: "ridgeway", name: "Marcus Bell", first: "Marcus", initials: "MB", title: "Partner sales lead", email: "marcus@ridgewayit.com", roleLabel: "Partner sales rep" },
   mkt: { role: "mkt", companyId: "ridgeway", name: "Priya Raman", first: "Priya", initials: "PR", title: "Marketing manager", email: "priya@ridgewayit.com", roleLabel: "Partner marketer" },
   tech: { role: "tech", companyId: "northpeak", name: "Raj Mehta", first: "Raj", initials: "RM", title: "Solutions architect", email: "raj.mehta@northpeak.co", roleLabel: "Partner technical lead" },
+  techr: { role: "tech", companyId: "ridgeway", name: "Theo Grant", first: "Theo", initials: "TG", title: "Pre-sales engineer", email: "theo@ridgewayit.com", roleLabel: "Partner technical lead" },
 }
 
 export const partnerManager = { name: "Jordan Lee", title: "Your partner manager at Brightline", email: "jordan.lee@brightline.io", phone: "+1 312 555 0199", initials: "JL" }
@@ -65,7 +68,7 @@ export const teamSeed: TeamMember[] = [
   { id: "u2", name: "Marcus Bell", title: "Partner sales rep", email: "marcus@ridgewayit.com", role: "Partner sales rep", canRegister: true, status: "active", lastActive: "2026-10-28T11:40:00", certified: "Analytics sales" },
   { id: "u3", name: "Jenna Ruiz", title: "Partner sales rep", email: "jenna@ridgewayit.com", role: "Partner sales rep", canRegister: true, status: "active", lastActive: "2026-10-27T17:10:00" },
   { id: "u4", name: "Priya Raman", title: "Partner marketer", email: "priya@ridgewayit.com", role: "Partner marketer", canRegister: false, status: "active", lastActive: "2026-10-24T10:00:00" },
-  { id: "u5", name: "Theo Grant", title: "Partner technical lead", email: "theo@ridgewayit.com", role: "Partner technical lead", canRegister: false, status: "invited" },
+  { id: "u5", name: "Theo Grant", title: "Partner technical lead", email: "theo@ridgewayit.com", role: "Partner technical lead", canRegister: false, status: "active", lastActive: "2026-10-28T09:20:00" },
 ]
 
 // Ridgeway's portal roles use the persona names. The partner executive is Ridgeway's admin.

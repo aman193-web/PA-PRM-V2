@@ -33,6 +33,7 @@ function Ladder({ k }: { k: Skill }) {
 
 function Exam({ k, onClose }: { k: Skill; onClose: () => void }) {
   const { dispatch } = useStore()
+  const { company } = usePartner()
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-[480px]">
@@ -46,7 +47,7 @@ function Exam({ k, onClose }: { k: Skill; onClose: () => void }) {
         </ul>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Not now</Button>
-          <Button onClick={() => { dispatch({ type: "passExam", skillId: k.id }); toast.success(`Certified in ${k.product}`, { description: "Northpeak's capability score went up. Brightline uses it to match Northpeak to deals." }); onClose() }}>
+          <Button onClick={() => { dispatch({ type: "passExam", skillId: k.id }); toast.success(`Certified in ${k.product}`, { description: `${company.short}'s capability score went up. Brightline uses it to match ${company.short} to deals.` }); onClose() }}>
             <GraduationCap /> Pass the exam (demo)
           </Button>
         </DialogFooter>

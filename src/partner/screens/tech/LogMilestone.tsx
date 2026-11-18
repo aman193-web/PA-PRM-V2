@@ -21,7 +21,7 @@ const delivering = ["Workshop", "Design sign-off", "Pilot / POC"]
 /** Log a delivery milestone in about 30 seconds. It becomes a touch on the Salesforce opportunity: evidence for credit. */
 export function LogMilestone({ engId, taskId }: { engId?: string; taskId?: string }) {
   const { state, dispatch } = useStore()
-  const { me } = usePartner()
+  const { me, company } = usePartner()
   const t = useDelivery()
   const loggable = t.views.filter((v) => v.canLog)
   const first = loggable.find((v) => v.e.id === engId) ?? loggable[0]
@@ -54,8 +54,8 @@ export function LogMilestone({ engId, taskId }: { engId?: string; taskId?: strin
           </div>
           {done.upgraded && <p className="mt-5 flex items-center gap-2.5 rounded-[12px] bg-ok-soft/70 px-4 py-3 text-[15.5px] font-medium text-foreground"><Award className="size-5 text-ok" /> You're now Sell-Ready in {done.upgraded}.</p>}
           <ul className="mt-5 space-y-2 text-[15px]">
-            <li className="flex gap-2.5"><Check className="mt-0.5 size-4 shrink-0 text-ok" /> The attribution agent uses it as evidence for Northpeak's credit.</li>
-            <li className="flex gap-2.5"><Check className="mt-0.5 size-4 shrink-0 text-ok" /> Jordan Lee, Northpeak's partner manager, sees it on the opportunity.</li>
+            <li className="flex gap-2.5"><Check className="mt-0.5 size-4 shrink-0 text-ok" /> The attribution agent uses it as evidence for {company.short}'s credit.</li>
+            <li className="flex gap-2.5"><Check className="mt-0.5 size-4 shrink-0 text-ok" /> Jordan Lee, {company.short}'s partner manager, sees it on the opportunity.</li>
             <li className="flex gap-2.5"><Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground" /> Touches can't be edited or deleted. Add a new one to correct it.</li>
           </ul>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -68,7 +68,7 @@ export function LogMilestone({ engId, taskId }: { engId?: string; taskId?: strin
 
   return (
     <div>
-      <PageHeader back={{ label: "Deals you work on", href: "/p/work" }} title={<span className="flex flex-wrap items-center gap-3">Log a milestone <StageTag /></span>} sub="Tell Brightline what you delivered. It's recorded as a touch on the deal, the evidence behind Northpeak's credit." />
+      <PageHeader back={{ label: "Deals you work on", href: "/p/work" }} title={<span className="flex flex-wrap items-center gap-3">Log a milestone <StageTag /></span>} sub={`Tell Brightline what you delivered. It's recorded as a touch on the deal, the evidence behind ${company.short}'s credit.`} />
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <Panel>
           <div className="grid gap-5">
@@ -108,7 +108,7 @@ export function LogMilestone({ engId, taskId }: { engId?: string; taskId?: strin
           <Panel title="Where it goes">
             <ul className="space-y-2.5 text-[15px]">
               <li className="flex gap-2.5"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />A touch on the Salesforce opportunity, with your name and today's date</li>
-              <li className="flex gap-2.5"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />The attribution agent counts it as evidence for Northpeak's credit</li>
+              <li className="flex gap-2.5"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />The attribution agent counts it as evidence for {company.short}'s credit</li>
               <li className="flex gap-2.5"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />A workshop, design or pilot can move you to Sell-Ready in that product</li>
             </ul>
           </Panel>

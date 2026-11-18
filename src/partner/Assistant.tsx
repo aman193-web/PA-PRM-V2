@@ -7,7 +7,7 @@ import { date, money } from "@/lib/format"
 import { go } from "@/lib/router"
 import { useStore } from "@/store"
 import { company, nextTier } from "@/partner/data"
-import { daysUntil, partnerNext, partnerStatus, usePartner, usePartnerData } from "@/partner/usePartner"
+import { daysUntil, partnerNext, partnerStatus, tierRequirements, usePartner, usePartnerData } from "@/partner/usePartner"
 import { useMarketing } from "@/partner/useMarketing"
 import { TODAY, useDelivery } from "@/partner/useDelivery"
 
@@ -51,7 +51,7 @@ function answerMkt(q: string, m: ReturnType<typeof useMarketing>): Msg {
   return { from: "ai", text: "I can help with your campaigns, campaign leads and funds. I only see what you can see in this portal." }
 }
 
-function answerTech(q: string, d: ReturnType<typeof useDelivery>): Msg {
+function answerTech(q: string, d: ReturnType<typeof useDelivery>, short: string): Msg {
   const t = q.toLowerCase()
   const v = d.views.find((x) => t.includes(x.e.account.toLowerCase().split(" ")[0]))
   if (v) {
@@ -68,7 +68,7 @@ function answerTech(q: string, d: ReturnType<typeof useDelivery>): Msg {
   if (t.includes("skill") || t.includes("ladder") || t.includes("cert") || t.includes("exam"))
     return { from: "ai", text: d.skills.map((k) => `• ${k.product}: ${k.level}. ${k.next}`).join("\n"), links: [{ label: "Open Skills", href: "/p/skills" }] }
   if (t.includes("influence") || t.includes("credit") || t.includes("revenue") || t.includes("earn"))
-    return { from: "ai", text: `You've influenced ${money(d.influenced)} of closed-won revenue this year. Northpeak's credit on those deals is ${money(d.creditWon)}. You're delivering on another ${money(d.pipeline)} of open pipeline.`, links: [{ label: "Open Influence", href: "/p/influence" }] }
+    return { from: "ai", text: `You've influenced ${money(d.influenced)} of closed-won revenue this year. ${short}'s credit on those deals is ${money(d.creditWon)}. You're delivering on another ${money(d.pipeline)} of open pipeline.`, links: [{ label: "Open Influence", href: "/p/influence" }] }
   if (t.includes("log") || t.includes("milestone"))
     return { from: "ai", text: "Pick the deal and the milestone, and say what happened. It's recorded as a touch on the Salesforce opportunity.", links: [{ label: "Log a milestone", href: "/p/log" }] }
   return { from: "ai", text: "I can help with the deals you work on, your tasks, skills and influence. I only see what you can see in this portal." }
@@ -76,7 +76,7 @@ function answerTech(q: string, d: ReturnType<typeof useDelivery>): Msg {
 
 type Data = ReturnType<typeof usePartnerData>
 
-function answer(q: string, d: Data, isExec: boolean, team: { name: string; status: string; role: string }[]): Msg {
+function answer(q: string, d: Data, isExec: boolean, team: { name: string; status: string; role: string }[], reqs: ReturnType<typeof tierRequirements>): Msg {
   const t = q.toLowerCase()
   const deal = d.deals.find((r) => t.includes(r.customer.toLowerCase().split(" ")[0]))
   if (deal) {
@@ -108,7 +108,7 @@ function answer(q: string, d: Data, isExec: boolean, team: { name: string; statu
   if (isExec && (t.includes("platinum") || t.includes("tier")))
     return {
       from: "ai",
-      text: `To reach Platinum you need: ${nextTier.requirements.filter((r) => r.have < r.need).map((r) => `${r.label.toLowerCase()} (${r.money ? `${money(r.have)} of ${money(r.need)}` : `${r.have} of ${r.need}`})`).join("; ")}. Getting two more reps through the Platform sales certification is the quickest win.`,
+      text: `To reach Platinum you need: ${reqs.filter((r) => r.have < r.need).map((r) => `${r.label.toLowerCase()} (${r.money ? `${money(r.have)} of ${money(r.need)}` : `${r.have} of ${r.need}`})`).join("; ")}. Getting two more reps through the Platform sales certification is the quickest win.`,
       links: [{ label: "Open Program", href: "/p/program" }],
     }
   if (t.includes("lead"))
@@ -135,7 +135,7 @@ const Ctx = createContext<{ ask: (q?: string) => void }>({ ask: () => {} })
 export const usePartnerAssistant = () => useContext(Ctx)
 
 export function PartnerAssistantProvider({ children }: { children: ReactNode }) {
-  const { me, isExec, isMkt, isTech } = usePartner()
+  const { me, company, isExec, isMkt, isTech } = usePartner()
   const d = usePartnerData()
   const mk = useMarketing()
   const dl = useDelivery()
@@ -148,7 +148,7 @@ export function PartnerAssistantProvider({ children }: { children: ReactNode }) 
 
   const send = (q: string) => {
     if (!q.trim()) return
-    const reply = isMkt ? answerMkt(q, mk) : isTech ? answerTech(q, dl) : answer(q, d, isExec, state.team)
+    const reply = isMkt ? answerMkt(q, mk) : isTech ? answerTech(q, dl, company.short) : answer(q, d, isExec, state.team, tierRequirements(state))
     setMsgs((m) => [...m, { from: "me", text: q }, reply])
     setDraft("")
   }

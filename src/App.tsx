@@ -82,7 +82,7 @@ function Routes({ onSignOut }: { onSignOut: () => void }) {
 
 const roleSlug: Record<DemoRole, string> = {
   pam: "partner-manager", chief: "channel-chief", revops: "revops", ae: "field-seller", ceo: "cfo", cro: "cro", it: "it-admin", aisup: "ai-supervisor",
-  pexec: "partner-executive", rep: "partner-sales-rep", mkt: "partner-marketer", tech: "partner-technical-lead",
+  pexec: "partner-executive", rep: "partner-sales-rep", mkt: "partner-marketer", tech: "partner-technical-lead", techr: "ridgeway-technical-lead",
 }
 
 /** RevOps, the field seller, the CFO, the CRO, IT and the AI supervisor share one Brightline app under #/v/. */
@@ -127,7 +127,7 @@ export default function App() {
     if (who === "pam") screen = <Login onSignIn={(to) => signIn("pam", to)} onBack={() => go("/welcome")} />
     else if (who === "chief") screen = <Login key="chief" variant="chief" onSignIn={() => signIn("chief")} onBack={() => go("/welcome")} />
     else if (isVendor(who)) screen = <Login key={who} variant={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
-    else if (who === "pexec" || who === "rep" || who === "mkt" || who === "tech") screen = <PartnerLogin role={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
+    else if (who === "pexec" || who === "rep" || who === "mkt" || who === "tech" || who === "techr") screen = <PartnerLogin persona={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
     else screen = <Welcome onPick={(r) => signIn(r)} />
   } else if (role === "pam") {
     screen = <Routes onSignOut={signOut} />
@@ -136,7 +136,7 @@ export default function App() {
   } else if (isVendor(role)) {
     screen = <VendorApp role={role} onSignOut={signOut} />
   } else {
-    screen = <PartnerApp role={role} onSignOut={signOut} />
+    screen = <PartnerApp persona={role} onSignOut={signOut} />
   }
 
   return (

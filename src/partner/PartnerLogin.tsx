@@ -5,9 +5,9 @@ import { Logo } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { companies, people, type PartnerRoleId } from "@/partner/data"
+import { companies, people, type PartnerPersonaId, type PartnerRoleId } from "@/partner/data"
 
-const copy: Record<PartnerRoleId, { title: string; sub: string; stats: [string, string][]; signIn: string; invite: string; points: string[] }> = {
+const copy: Record<PartnerPersonaId, { title: string; sub: string; stats: [string, string][]; signIn: string; invite: string; points: string[] }> = {
   rep: {
     title: "Register a deal in three taps. Know it's protected in a minute.",
     sub: "Describe the deal or forward the customer's email. AI fills in the form, you confirm, and the rules decide clean deals in 60 seconds.",
@@ -40,9 +40,17 @@ const copy: Record<PartnerRoleId, { title: string; sub: string; stats: [string, 
     invite: "Invited by Hannah Cho, Northpeak's admin",
     points: ["Only the Northpeak deals you work on", "Other partners' shares stay private"],
   },
+  techr: {
+    title: "Get certified, deliver, and get credit for it.",
+    sub: "Log demos, proofs of concept and go-lives in seconds. Each one is recorded as evidence on the deal, so the influence your work creates is credited to Ridgeway.",
+    stats: [["Skills ladder", "from Learned to Proven"], ["30 seconds", "to log a milestone"], ["Influence", "credited on deals you worked"]],
+    signIn: "Sign in to see your deals, skills and influence.",
+    invite: "Invited by Paul Okafor, Ridgeway's admin",
+    points: ["Only the Ridgeway deals you work on", "Other partners' shares stay private"],
+  },
 }
 
-function Preview({ role }: { role: PartnerRoleId }) {
+function Preview({ role, company }: { role: PartnerRoleId; company: string }) {
   if (role === "mkt")
     return (
       <div className="w-full max-w-[420px] rounded-[18px] border border-white/15 bg-white/[0.06] p-5 backdrop-blur-sm">
@@ -62,7 +70,7 @@ function Preview({ role }: { role: PartnerRoleId }) {
         <div className="mt-3 grid grid-cols-4 gap-1.5">
           {["Learned", "Certified", "Sell-Ready", "Proven"].map((l) => <span key={l} className="rounded-[8px] bg-[#ffb359] px-1 py-1.5 text-center text-[12px] font-bold text-[#2a1a00]">{l}</span>)}
         </div>
-        <span className="mt-4 inline-flex items-center gap-2 text-[13.5px] text-[#cfe0f7]"><BadgeCheck className="size-4 text-[#4fd18b]" /> Go-live at Pinecrest Utilities recorded as a touch</span>
+        <span className="mt-4 inline-flex items-center gap-2 text-[13.5px] text-[#cfe0f7]"><BadgeCheck className="size-4 text-[#4fd18b]" /> {company === "ridgeway" ? "Go-live at Lakeshore Hotels" : "Go-live at Pinecrest Utilities"} recorded as a touch</span>
       </div>
     )
   if (role === "rep")
@@ -91,10 +99,11 @@ function Preview({ role }: { role: PartnerRoleId }) {
 }
 
 /** Partner sign-in: the partner's own SSO or a work-email link (BRD persona sign-in). Same layout as the PAM sign-in. */
-export function PartnerLogin({ role, onSignIn, onBack }: { role: PartnerRoleId; onSignIn: () => void; onBack: () => void }) {
-  const me = people[role]
+export function PartnerLogin({ persona, onSignIn, onBack }: { persona: PartnerPersonaId; onSignIn: () => void; onBack: () => void }) {
+  const me = people[persona]
+  const role: PartnerRoleId = me.role
   const company = companies[me.companyId]
-  const c = copy[role]
+  const c = copy[persona]
   const [email, setEmail] = useState(me.email)
   const [busy, setBusy] = useState<string | null>(null)
   const start = (m: string) => {
@@ -115,7 +124,7 @@ export function PartnerLogin({ role, onSignIn, onBack }: { role: PartnerRoleId; 
           <h1 className="mt-7 max-w-[20ch] text-[32px] leading-[1.08] font-bold text-white sm:text-[40px] xl:text-[44px]">{c.title}</h1>
           <p className="mt-4 max-w-[46ch] text-[17px] text-[#b9cbe4]">{c.sub}</p>
         </div>
-        <div className="relative hidden flex-1 items-center sm:flex"><Preview role={role} /></div>
+        <div className="relative hidden flex-1 items-center sm:flex"><Preview role={role} company={me.companyId} /></div>
         <div className="relative grid gap-3 sm:grid-cols-3">
           {c.stats.map(([k, v]) => (
             <div key={k} className="rounded-[14px] border border-white/15 bg-white/[0.04] px-4 py-3.5 backdrop-blur-sm xl:px-5">

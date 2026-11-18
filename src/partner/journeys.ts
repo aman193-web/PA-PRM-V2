@@ -168,3 +168,45 @@ export const techJourneys: JourneysConfig = {
   cannot: ["Edit a logged milestone", "Register deals or see deals he doesn't work on", "See other partners' shares", "Change credit"],
   note: "Northpeak's own partner executive, Hannah Cho, isn't a separate portal: Paul's portal shows that role.",
 }
+
+/** Ridgeway's own technical lead: same portal as Raj, on a reseller's deals (added beyond the persona document, G41). */
+export const techRidgewayJourneys: JourneysConfig = {
+  title: "Partner technical lead at Ridgeway: three journeys",
+  sub: "Theo Grant is Ridgeway IT's pre-sales engineer: demos, proofs of concept and go-lives on Ridgeway's deals. The same portal as Northpeak's Raj Mehta. Most of this arrives in Stage 2.",
+  journeys: [
+    {
+      n: 1, title: "Get Ridgeway its certified technical lead", tag: "J-04 · capability ladder", stage: "Stage 2",
+      steps: [
+        { title: "Finishes the Platform course", detail: "Courses run in Brightline's academy and progress syncs back. Learned is the first step.", href: "/p/skills", ids: "R-GR-3" },
+        { title: "Passes the certification exam", detail: "Ridgeway needs one certified technical lead for Platinum. Paul sees the requirement met straight away.", href: "/p/skills", ids: "R-GR-1", main: true },
+        { title: "Delivers on a real deal", detail: "A workshop, design or pilot on a Platform deal makes Theo Sell-Ready. Proven is automatic when it closes won.", href: "/p/work/ENG-7", ids: "R-GR-3" },
+      ],
+    },
+    {
+      n: 2, title: "Deliver and log milestones", tag: "Hand-off flow · joint plan", stage: "Stage 2",
+      steps: [
+        { title: "Picks up a joint-plan task", detail: "Copperline Mining: a platform workshop agreed with Brightline's seller and the customer.", href: "/p/work/ENG-7", ids: "J-03" },
+        { title: "Logs the milestone in 30 seconds", detail: "Recorded as a touch on the Salesforce opportunity. Nobody can edit it afterwards.", href: "/p/log/ENG-7/T1", ids: "Log delivery", main: true },
+        { title: "Jordan sees it on the opportunity", detail: "The attribution agent uses it as evidence for Ridgeway's credit.", href: "/p/work/ENG-7", ids: "J-02" },
+      ],
+    },
+    {
+      n: 3, title: "See the influence it created", tag: "J-02 Revenue proof", stage: "Stages 1B and 2",
+      steps: [
+        { title: "Sees influenced revenue", detail: "Lakeshore Hotels closed won after Theo ran the workshop and the go-live.", href: "/p/influence", ids: "R-CR-9", main: true },
+        { title: "Sees Ridgeway's share on a shared deal", detail: "On Harborview Logistics Ridgeway is the reseller next to two other partners, whose shares stay private.", href: "/p/influence", ids: "R-CR-5" },
+        { title: "Raises a split with Jordan", detail: "If a split looks wrong, Theo asks Jordan. Disputes arrive in Stage 2.", href: "/p/influence", ids: "R-CR-11 · Stage 2" },
+      ],
+    },
+  ],
+  handoffs: [
+    ["To Jordan Lee (partner manager)", "Delivery milestones, recorded as touches on the opportunity"],
+    ["From Ridgeway's sales reps", "Deals they registered that need a demo, proof of concept or rollout"],
+    ["To Paul Okafor (Ridgeway's admin)", "A certified technical lead, which counts towards Platinum"],
+    ["To the attribution agent", "Evidence for Ridgeway's credit"],
+  ],
+  canTitle: "What a partner technical lead can and can't do",
+  can: ["See the Ridgeway deals they work on and their joint plans", "Log delivery milestones as touches", "Climb the skills ladder", "See influenced revenue and Ridgeway's credit"],
+  cannot: ["Edit a logged milestone", "Register deals or see deals they don't work on", "See other partners' shares", "Change credit"],
+  note: "Added beyond the persona document, which puts the technical lead at a services partner. Resellers have technical people too (G41).",
+}

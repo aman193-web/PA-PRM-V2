@@ -2,12 +2,13 @@ import { createContext, useContext, useMemo, type ReactNode } from "react"
 import type { Lead, PartnerRole, Registration } from "@/data/model"
 import { hoursLeft, NOW, shortDate } from "@/lib/format"
 import { useStore, type State } from "@/store"
-import { companies, people, repProfiles, type PartnerPerson, type PartnerRoleId } from "@/partner/data"
+import { companies, nextTier, people, repProfiles, type PartnerPerson, type PartnerPersonaId } from "@/partner/data"
+import { ladder } from "@/partner/delivery"
 
 const Ctx = createContext<PartnerPerson | null>(null)
 
-export function PartnerProvider({ role, children }: { role: PartnerRoleId; children: ReactNode }) {
-  return <Ctx.Provider value={people[role]}>{children}</Ctx.Provider>
+export function PartnerProvider({ persona, children }: { persona: PartnerPersonaId; children: ReactNode }) {
+  return <Ctx.Provider value={people[persona]}>{children}</Ctx.Provider>
 }
 
 export function usePartner() {
@@ -170,4 +171,12 @@ export function suggestRep(lead: Lead, state: State): RepSuggestion | null {
   if (!best || !best.reasons.length) return null
   const lighter = scored.find((s) => s.open < best.open)
   return { rep: best.rep, reasons: best.reasons, caveat: lighter ? `Has ${best.open} open deal${best.open === 1 ? "" : "s"}; ${lighter.rep} has ${lighter.open}` : `${best.open} open deal${best.open === 1 ? "" : "s"} right now` }
+}
+
+/** Next-tier requirements with the live counts: certified sales reps from the team, and a technical lead who has passed an exam. */
+export function tierRequirements(state: State) {
+  const active = state.team.filter((m) => m.status === "active")
+  const reps = active.filter((m) => m.certified).length
+  const leads = active.filter((m) => m.role === "Partner technical lead" && state.skills.some((k) => k.person === m.name && ladder.indexOf(k.level) >= 1)).length
+  return nextTier.requirements.map((r) => (r.label === "Certified sales reps" ? { ...r, have: reps } : r.label === "Certified technical lead" ? { ...r, have: leads } : r))
 }

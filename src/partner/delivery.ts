@@ -1,4 +1,4 @@
-// Partner technical lead demo data (Raj Mehta, Northpeak Consulting). Stage 2 in the plan.
+// Partner technical lead demo data: Raj Mehta (Northpeak Consulting) and Theo Grant (Ridgeway IT). Stage 2 in the plan.
 // Sources: persona doc (climb the capability ladder, log delivery milestones as touches, see influenced revenue on deals
 // worked, pick up joint-plan tasks), R-GR-1 and R-GR-3 (J-04), the hand-off flow (h8: the tech lead logs a delivery touch),
 // the co-sell flow (c6: joint plan with owners and dates) and Impartner's training slide (certifications expire in 1–3 years).
@@ -57,6 +57,18 @@ export const skillsSeed: Skill[] = [
     evidence: [],
     next: "Finish the course (4 of 12 lessons done), then take the exam.",
   },
+  // Theo Grant, Ridgeway's pre-sales engineer: not certified yet, which is why Ridgeway's Platinum checklist is missing a certified technical lead.
+  {
+    id: "SK-5", person: "Theo Grant", product: "Platform", level: "Learned", course: 100,
+    evidence: [{ level: "Learned", text: "Platform implementation course", at: "2026-10-20" }],
+    next: "Take the certification exam: 20 questions, 30 minutes, pass mark 80%.",
+    needFor: "Ridgeway needs one certified technical lead to reach Platinum.",
+  },
+  {
+    id: "SK-6", person: "Theo Grant", product: "Analytics", level: "Learned", course: 70,
+    evidence: [],
+    next: "Finish the course (9 of 13 lessons done), then take the exam.",
+  },
 ]
 
 export type MilestoneKind = "Kickoff" | "Workshop" | "Design sign-off" | "Pilot / POC" | "Go-live" | "Adoption review" | "Other"
@@ -67,14 +79,15 @@ export interface JointTask {
   id: string
   title: string
   owner: string
-  side: "Northpeak" | "Brightline" | "Customer"
+  /** The partner's short name, Brightline or the customer. */
+  side: string
   due: string
   status: "open" | "done"
   doneAt?: string
   milestone?: MilestoneKind
 }
 
-/** A Northpeak deal the technical lead is on the delivery team for. */
+/** A partner deal the technical lead is on the delivery team for. */
 export interface Engagement {
   id: string
   companyId: string
@@ -129,12 +142,66 @@ export const engagementsSeed: Engagement[] = [
       { id: "T2", title: "Site visits and data access", owner: "Kestrel Energy", side: "Customer", due: "2026-11-17", status: "open" },
     ],
   },
+  // Theo Grant at Ridgeway IT: demos, proofs of concept and go-lives on Ridgeway's own deals.
+  {
+    id: "ENG-5", companyId: "ridgeway", person: "Theo Grant", regId: "REG-1612", oppId: "006Q8000013LksH", account: "Lakeshore Hotels", product: "Analytics · Enterprise", value: 124000,
+    myRole: "Pre-sales engineer", phase: "Live", brightlineAe: "Priya Nair",
+    tasks: [
+      { id: "T1", title: "Guest analytics workshop with the revenue team", owner: "Theo Grant", side: "Ridgeway", due: "2026-06-20", status: "done", doneAt: "2026-06-20", milestone: "Workshop" },
+      { id: "T2", title: "Go-live across 12 hotels", owner: "Theo Grant", side: "Ridgeway", due: "2026-09-10", status: "done", doneAt: "2026-09-10", milestone: "Go-live" },
+      { id: "T3", title: "90-day adoption review", owner: "Theo Grant", side: "Ridgeway", due: "2026-12-09", status: "open", milestone: "Adoption review" },
+    ],
+  },
+  {
+    id: "ENG-6", companyId: "ridgeway", person: "Theo Grant", regId: "REG-1880", oppId: "006Q8000021NgtR", account: "Northgate Retail", product: "Analytics · Renewal", value: 64000,
+    myRole: "Pre-sales engineer", phase: "Pre-sales", brightlineAe: "Alex Morgan",
+    tasks: [
+      { id: "T1", title: "Demo of the new store dashboards", owner: "Theo Grant", side: "Ridgeway", due: "2026-10-14", status: "done", doneAt: "2026-10-14", milestone: "Workshop" },
+      { id: "T2", title: "Migration plan for the 2027 renewal", owner: "Theo Grant", side: "Ridgeway", due: "2026-11-05", status: "open", milestone: "Design sign-off" },
+      { id: "T3", title: "Renewal pricing", owner: "Marcus Bell", side: "Ridgeway", due: "2026-11-12", status: "open" },
+    ],
+  },
+  {
+    id: "ENG-7", companyId: "ridgeway", person: "Theo Grant", regId: "REG-1960", account: "Copperline Mining", product: "Platform · Standard", value: 47000,
+    myRole: "Pre-sales engineer", phase: "Pre-sales", brightlineAe: "Priya Nair",
+    tasks: [
+      { id: "T1", title: "Platform workshop with the mine operations team", owner: "Theo Grant", side: "Ridgeway", due: "2026-10-30", status: "open", milestone: "Workshop" },
+      { id: "T2", title: "Site data inventory", owner: "Copperline Mining", side: "Customer", due: "2026-11-13", status: "open" },
+    ],
+  },
+  {
+    id: "ENG-8", companyId: "ridgeway", person: "Theo Grant", oppId: "006Q8000024HrvL", account: "Harborview Logistics", product: "Analytics · Enterprise", value: 210000,
+    myRole: "Reseller technical contact", phase: "Pre-sales", brightlineAe: "Priya Nair",
+    tasks: [
+      { id: "T1", title: "Licence sizing for 400 drivers", owner: "Theo Grant", side: "Ridgeway", due: "2026-10-01", status: "done", doneAt: "2026-10-01", milestone: "Other" },
+      { id: "T2", title: "Integration test with the fleet system", owner: "Theo Grant", side: "Ridgeway", due: "2026-11-12", status: "open", milestone: "Pilot / POC" },
+      { id: "T3", title: "Security review answers", owner: "Priya Nair", side: "Brightline", due: "2026-11-04", status: "open" },
+    ],
+  },
+  {
+    id: "ENG-9", companyId: "ridgeway", person: "Theo Grant", regId: "REG-2041", account: "Acme Manufacturing", product: "Analytics · Enterprise", value: 62000,
+    myRole: "Pre-sales engineer", phase: "Pre-sales", brightlineAe: "Sam Rivera",
+    tasks: [
+      { id: "T1", title: "Technical discovery with Elena Ruiz's team", owner: "Theo Grant", side: "Ridgeway", due: "2026-11-07", status: "open", milestone: "Workshop" },
+    ],
+  },
 ]
 
-/** Northpeak's other technical people, by product. Raj's own levels are added live to roll up the company score (J-04, g3). */
+
+/** Each company's other technical people, by product. The signed-in lead's own levels are added live to roll up the company score (J-04, g3). */
 export const northpeakOthers = [
   { product: "Platform", certified: 4, proven: 2 },
   { product: "Analytics", certified: 2, proven: 2 },
   { product: "Grid analytics", certified: 0, proven: 0 },
   { product: "Integration API", certified: 2, proven: 1 },
 ]
+
+export const othersByCompany: Record<string, { product: string; certified: number; proven: number }[]> = {
+  northpeak: northpeakOthers,
+  ridgeway: [
+    { product: "Platform", certified: 0, proven: 0 },
+    { product: "Analytics", certified: 0, proven: 0 },
+    { product: "Grid analytics", certified: 0, proven: 0 },
+    { product: "Integration API", certified: 0, proven: 0 },
+  ],
+}
