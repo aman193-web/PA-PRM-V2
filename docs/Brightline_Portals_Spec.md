@@ -52,7 +52,7 @@ With these six, the prototype has a portal for each of the BRD's twelve personas
 | Home | Share of closed-won partner deals matched to Salesforce, open exceptions, sync lag, changes waiting for Dana |
 | Exceptions | Four kinds, all flagged by the Data Steward agent: failed Salesforce write, uncertain match, revenue mismatch, stale deal. Each shows PRM against Salesforce, the agent's advice and the options. Jordan's "Tell RevOps" shows on the matching item. |
 | Reconciliation | Every closed-won partner deal with its status, plus the append-only revenue ledger |
-| Programs and rules | Each program's rules by version. Propose a change (program, rule, new value, why) or launch the Marketplace program from its template |
+| Programs and rules | Each program's rules by version. Propose a change (program, rule, new value, why), launch the Marketplace program from its template, or create a **New program**: pick a template, name it, adjust its four starting rules and say why. It shows as Not launched until Dana approves; then it's live at version 1. |
 
 **Seeded exceptions:**
 - Cedar Valley Schools: $45,000 credited against $42,000 in Salesforce.

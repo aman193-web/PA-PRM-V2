@@ -7,7 +7,7 @@ import type {
 import { roleWeights } from "@/data/model"
 import { NOW, addDays, money } from "@/lib/format"
 import { agreementsSeed, teamSeed, type Agreement as PartnerAgreement, type TeamMember } from "@/partner/data"
-import { agents as agentSeed, requestsSeed, rulesSeed, type ChangeRequest, type ProgramId, type RuleSet } from "@/chief/data"
+import { agents as agentSeed, requestsSeed, rulesSeed, type ChangeRequest, type ProgramId, type ProgramInfo, type RuleSet } from "@/chief/data"
 import { campaignLeadsSeed, campaignsSeed, mdfSeed, type Campaign, type CampaignLead, type MdfRequest } from "@/partner/marketing"
 import { engagementsSeed, skillsSeed, type Engagement, type Skill } from "@/partner/delivery"
 import {
@@ -67,6 +67,8 @@ export interface State {
   opsFeed: ActivityItem[]
   /** Programs launched from a template since the demo started (the Marketplace program). */
   launched: ProgramId[]
+  /** Programs RevOps created from a template. Not launched until the channel chief approves their rules. */
+  customPrograms: ProgramInfo[]
   /* Field seller */
   cosell: CoSellRequest[]
   /** Context a Brightline seller added to a registration on their account, for the partner manager. */
@@ -149,6 +151,7 @@ const initial: State = {
   exceptions: exceptionsSeed,
   ledger: ledgerSeed,
   launched: [],
+  customPrograms: [],
   opsFeed: [
     { id: "o1", at: "2026-10-28T09:40:00", text: "The Data Steward agent flagged two Salesforce accounts that look like one company", href: "/v/exception/EX-43" },
     { id: "o2", at: "2026-10-28T06:30:00", text: "Orchid Foods has had no Salesforce activity for 52 days", href: "/v/exception/EX-44" },
@@ -822,13 +825,22 @@ function core(s: State, a: Action): State {
         opsFeed: item(s.opsFeed, `You ${status === "waiting" ? "handed on" : "resolved"}: ${x.title}`, `/v/exception/${x.id}`),
       }
     }
-    case "proposeRule":
+    case "proposeRule": {
+      // A new program is added straight away as "Not launched", with the template's rules as version 0.
+      const np = a.req.newProgram
+      const tpl = np?.template ? s.programRules[np.template] : undefined
+      const programRules = np && tpl
+        ? { ...s.programRules, [np.id]: { ...tpl, ...a.req.patch, autoApproveTop: undefined, version: 0, history: [{ version: 0, at: stamp(), by: `${OPS} set it up from the ${np.template} template`, note: "Not launched: waiting for the channel chief" }] } }
+        : s.programRules
       return {
         ...s,
+        programRules,
+        customPrograms: np && !s.customPrograms.some((p) => p.id === np.id) ? [...s.customPrograms, np] : s.customPrograms,
         requests: [a.req, ...s.requests],
         chiefFeed: chiefLog(s, `${a.req.from} (${a.req.fromRole}) sent you a ${a.req.launch ? "new program" : "rule change"}: ${a.req.title}`, `/c/approval/req-${a.req.id}`),
         opsFeed: item(s.opsFeed, `You sent ${CHIEF} ${a.req.launch ? "a new program" : "a rule change"}: ${a.req.title}`, "/v/programs"),
       }
+    }
 
     /* ---------- field seller ---------- */
     case "sendCoSell": {

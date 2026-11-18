@@ -157,7 +157,7 @@ function Overview() {
                   <span className="min-w-0"><b className="block text-foreground">{p.id} program</b><span className="block truncate text-[14px] text-muted-foreground">{p.what}</span></span>
                   <span className="text-right text-foreground tabular">{p.live ? members.length : "—"}</span>
                   <span className="hidden text-right font-semibold text-foreground tabular md:block">{p.live ? money(won) : "—"}</span>
-                  <span className="hidden md:block">{p.live ? <><span className="block h-2 rounded-full bg-muted"><span className="block h-full rounded-full bg-primary" style={{ width: `${(p.spent / p.budget) * 100}%` }} /></span><span className="text-[13px] text-muted-foreground tabular">{money(p.spent)} of {money(p.budget)}</span></> : <span className="text-muted-foreground">—</span>}</span>
+                  <span className="hidden md:block">{p.live && p.budget ? <><span className="block h-2 rounded-full bg-muted"><span className="block h-full rounded-full bg-primary" style={{ width: `${(p.spent / p.budget) * 100}%` }} /></span><span className="text-[13px] text-muted-foreground tabular">{money(p.spent)} of {money(p.budget)}</span></> : <span className="text-muted-foreground">—</span>}</span>
                   <span className="hidden text-right font-semibold text-ok tabular md:block">{p.live && p.spent ? `${(won / p.spent).toFixed(1)}x` : "—"}</span>
                   <span className="hidden md:block">{p.live ? <Badge variant="secondary">v{rules.version}</Badge> : <Badge variant="outline" className="border-dashed">Not launched</Badge>}</span>
                   <ArrowRight className="hidden size-4 text-muted-foreground md:block" />
@@ -199,7 +199,7 @@ function ProgramView({ id }: { id: ProgramId }) {
             {[
               ["Partners", String(members.length)],
               ["Verified 2026", money(won)],
-              ["Budget used", `${money(p.spent)} of ${money(p.budget)}`],
+              ["Budget used", p.budget ? `${money(p.spent)} of ${money(p.budget)}` : "Not set yet"],
               ["Return", p.spent ? `${(won / p.spent).toFixed(1)}x` : "—"],
             ].map(([k, v]) => <div key={k} className="rounded-[12px] bg-muted/60 px-4 py-3"><dt className="text-[13.5px] text-muted-foreground">{k}</dt><dd className="text-[19px] font-bold text-foreground tabular">{v}</dd></div>)}
           </dl>
@@ -207,7 +207,7 @@ function ProgramView({ id }: { id: ProgramId }) {
       </Panel>
 
       {!p.live && (
-        <Panel><EmptyState icon={<Layers className="size-6" />} title="Not launched yet" body={pending.some((r) => r.launch) ? "Ana Costa (RevOps) set it up from the Marketplace template. It goes live when you approve its rules. Below are the template's starting rules." : "RevOps can create it from the Marketplace template. You approve its rules before any partner can join. Below are the template's starting rules."} /></Panel>
+        <Panel><EmptyState icon={<Layers className="size-6" />} title="Not launched yet" body={pending.some((r) => r.launch) ? `${p.createdBy ?? "Ana Costa"} (RevOps) set it up from the ${p.template ?? p.id} template. It goes live when you approve its rules. Below are the rules it would start with.` : `RevOps can set it up from the ${p.template ?? p.id} template. You approve its rules before any partner can join. Below are the rules it would start with.`} /></Panel>
       )}
 
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">

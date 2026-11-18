@@ -27,7 +27,7 @@ export const opsJourneys: JourneysConfig = {
       steps: [
         { title: "Sees each program's rules", detail: "Auto-approve limit, review deadline, protection window and lead acceptance, by version.", href: "/v/programs", ids: "R-REG-6 · R-SLA-1" },
         { title: "Proposes a change with the data", detail: "New value and why. RevOps can't approve its own changes.", href: "/v/programs", ids: "R-APR-2", main: true },
-        { title: "Launches a program from a template", detail: "The Marketplace program goes live when Dana approves its rules.", href: "/v/programs", ids: "Persona" },
+        { title: "Creates a program from a template", detail: "New program: pick a template, name it (for example Distributor) and set its starting rules. It goes live when Dana approves.", href: "/v/programs", ids: "Persona" },
         { title: "Dana approves; a new version starts", detail: "Partner managers are told. Nothing is edited in place.", href: "/v/programs", ids: "R-APR-2" },
       ],
     },

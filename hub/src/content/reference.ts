@@ -85,7 +85,7 @@ export const portals: { persona: string; role: string; person: string; org: stri
     screens: ["Home", "Approvals (escalated deals, credit splits, second extensions, applications, rules and AI)", "Revenue by partner", "Partner managers", "Programs and rules (per program, versioned)", "Three journeys", "Your access"],
     added: ["Move partners between partner managers (G32)", "Rule changes scoped per program (G35)"] },
   { persona: "revops", role: "RevOps", person: "Ana Costa", org: "Brightline", stage: "1A–1B",
-    screens: ["Home (reconciled revenue, sync health)", "Exceptions (failed writes, uncertain matches, mismatches, stale deals)", "Reconciliation and the revenue ledger", "Programs and rules (propose changes, launch from a template)", "Three journeys", "Your access"],
+    screens: ["Home (reconciled revenue, sync health)", "Exceptions (failed writes, uncertain matches, mismatches, stale deals)", "Reconciliation and the revenue ledger", "Programs and rules (propose changes, create a new program from a template)", "Three journeys", "Your access"],
     added: ["Partner managers' Tell RevOps flags show on the matching exception", "Corrections are ledger entries; shares still need the chief (R-CR-14)"] },
   { persona: "ae", role: "Field seller", person: "Sam Rivera", org: "Brightline", stage: "1A · 2",
     screens: ["Home (partner-involved deals)", "My accounts, with partner registrations, roles and touches", "Find a partner (ranked, drafted, sent by the seller)", "Co-sell requests and joint plans", "Three journeys", "Your access"],

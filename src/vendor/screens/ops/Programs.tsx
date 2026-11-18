@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Clock3, History, Layers, PencilLine, Rocket, Send } from "lucide-react"
+import { Clock3, History, Layers, PencilLine, Plus, Rocket, Send } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader, Panel } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { NOW, ago, money } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
-import type { ChangeRequest, ProgramId, RuleSet } from "@/chief/data"
+import { templateIds, type ChangeRequest, type ProgramId, type ProgramInfo, type RuleSet } from "@/chief/data"
 import { useLivePrograms } from "@/chief/useChief"
 import { marketplaceTemplate, people, ruleFields, type RuleField } from "@/vendor/data"
 
@@ -104,31 +104,37 @@ function ProposeDialog({ program, onClose }: { program: ProgramId | null; onClos
   )
 }
 
-function LaunchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+type Rules = { autoApprove: number; reviewHours: number; protectionDays: number; leadHours: number }
+const rulesLine = (t: Rules) => `${money(t.autoApprove)} auto-approve, ${t.reviewHours}-hour reviews, ${t.protectionDays}-day protection and ${t.leadHours}-hour lead acceptance`
+
+/** Send a not-launched program to the chief: the Marketplace template, or a program RevOps created that was declined. */
+function LaunchDialog({ program, onClose }: { program: ProgramId | null; onClose: () => void }) {
   const { state, dispatch } = useStore()
-  const [why, setWhy] = useState("Three enterprise customers asked to buy through their cloud marketplace commitments this quarter. We have no program for partners who sell that way.")
-  const t = marketplaceTemplate
+  const isMarketplace = program === "Marketplace"
+  const [why, setWhy] = useState(isMarketplace ? "Three enterprise customers asked to buy through their cloud marketplace commitments this quarter. We have no program for partners who sell that way." : "")
+  if (!program) return null
+  const r = state.programRules[program]
+  const t: Rules = isMarketplace ? marketplaceTemplate : { autoApprove: r.autoApprove, reviewHours: r.reviewHours, protectionDays: r.protectionDays, leadHours: r.leadHours }
   const send = () => {
     const req: ChangeRequest = {
-      id: `CR-${21 + state.requests.length}`, kind: "rule", programs: ["Marketplace"], launch: true,
-      title: "Launch the Marketplace program from its template",
+      id: `CR-${21 + state.requests.length}`, kind: "rule", programs: [program], launch: true,
+      title: `Launch the ${program} program${isMarketplace ? " from its template" : ""}`,
       from: people.revops.name, fromRole: "RevOps", at: NOW.toISOString(),
-      current: "Not launched (template only)",
-      proposed: `Live with ${money(t.autoApprove)} auto-approve, ${t.reviewHours}-hour reviews, ${t.protectionDays}-day protection and ${t.leadHours}-hour lead acceptance`,
+      current: "Not launched", proposed: `Live with ${rulesLine(t)}`,
       why: why.trim(),
-      impact: ["Partners can be added to the Marketplace program once it's live", "Marketplace deals use these rules from day one, as version 1", "Budget and tiers for the program are set separately", "Every other program keeps its own rules"],
+      impact: [`Partners can be added to the ${program} program once it's live`, `${program} deals use these rules from day one, as version 1`, "Budget and tiers for the program are set separately", "Every other program keeps its own rules"],
       status: "pending", patch: t,
     }
     dispatch({ type: "proposeRule", req })
-    toast.success("Sent to Dana Ortiz", { description: "The Marketplace program goes live when Dana approves its rules." })
+    toast.success("Sent to Dana Ortiz", { description: `The ${program} program goes live when Dana approves its rules.` })
     onClose()
   }
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>Set up the Marketplace program</DialogTitle>
-          <DialogDescription>From the Marketplace template. It goes live only when Dana Ortiz approves its rules.</DialogDescription>
+          <DialogTitle>Set up the {program} program</DialogTitle>
+          <DialogDescription>{isMarketplace ? "From the Marketplace template." : "With the rules you gave it."} It goes live only when Dana Ortiz approves its rules.</DialogDescription>
         </DialogHeader>
         <dl className="grid grid-cols-2 gap-3">
           {[["Auto-approve limit", money(t.autoApprove)], ["Review deadline", `${t.reviewHours} business hours`], ["Protection window", `${t.protectionDays} days`], ["Lead acceptance", `${t.leadHours} hours`]].map(([k, v]) => (
@@ -137,11 +143,106 @@ function LaunchDialog({ open, onClose }: { open: boolean; onClose: () => void })
         </dl>
         <div className="grid gap-1.5">
           <Label htmlFor="lwhy" className="text-[15px]">Why now</Label>
-          <Textarea id="lwhy" value={why} onChange={(e) => setWhy(e.target.value)} rows={3} className="text-[15.5px]" />
+          <Textarea id="lwhy" value={why} onChange={(e) => setWhy(e.target.value)} rows={3} className="text-[15.5px]" placeholder="What the data shows. Dana reads this first." />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button disabled={why.trim().length < 10} onClick={send}><Rocket /> Send for approval</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+const templateWhat: Record<string, string> = {
+  Reseller: "Partners buy Brightline products and resell them to their own customers",
+  Services: "Partners implement and support Brightline for customers",
+  Referral: "Partners introduce customers; Brightline sells to them directly",
+  Technology: "Partners whose products connect to Brightline",
+  Marketplace: "Customers buy Brightline through a cloud marketplace",
+}
+
+/** Create a brand-new program: pick a template, name it, adjust its starting rules, and send it to the chief (R-APR-2). */
+function NewProgramDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { state, dispatch } = useStore()
+  const taken = new Set([...Object.keys(state.programRules)].map((x) => x.toLowerCase()))
+  const [template, setTemplate] = useState<string>("Reseller")
+  const startFrom = (id: string): Rules => {
+    const r = id === "Marketplace" ? marketplaceTemplate : state.programRules[id]
+    return { autoApprove: r.autoApprove, reviewHours: r.reviewHours, protectionDays: r.protectionDays, leadHours: r.leadHours }
+  }
+  const [name, setName] = useState("")
+  const [what, setWhat] = useState(templateWhat.Reseller)
+  const [rules, setRules] = useState<Rules>(startFrom("Reseller"))
+  const [why, setWhy] = useState("")
+  const clean = name.trim().replace(/\s+program$/i, "")
+  const clash = !!clean && taken.has(clean.toLowerCase())
+  const ok = clean.length >= 3 && !clash && what.trim().length >= 10 && why.trim().length >= 10 && Object.values(rules).every((v) => v > 0)
+  const pick = (id: string) => { setTemplate(id); setRules(startFrom(id)); setWhat(templateWhat[id]) }
+  const send = () => {
+    const program: ProgramInfo = { id: clean, what: what.trim(), live: false, budget: 0, spent: 0, template, createdBy: people.revops.name }
+    const req: ChangeRequest = {
+      id: `CR-${21 + state.requests.length}`, kind: "rule", programs: [clean], launch: true, newProgram: program,
+      title: `New program: ${clean}, from the ${template} template`,
+      from: people.revops.name, fromRole: "RevOps", at: NOW.toISOString(),
+      current: "Doesn't exist yet", proposed: `Live with ${rulesLine(rules)}`,
+      why: why.trim(),
+      impact: [`A new partner track: ${what.trim().charAt(0).toLowerCase()}${what.trim().slice(1)}`, `Starts from the ${template} template's rules, as version 1`, "Partners join once it's live; budget and tiers are set separately", "Every other program keeps its own rules"],
+      status: "pending", patch: rules,
+    }
+    dispatch({ type: "proposeRule", req })
+    toast.success(`${clean} program sent to Dana Ortiz`, { description: "It shows as Not launched until Dana approves its rules." })
+    onClose()
+  }
+  const field = (key: keyof Rules, label: string, unit: string) => (
+    <div className="grid gap-1.5">
+      <Label htmlFor={`np-${key}`} className="text-[14.5px]">{label} <span className="font-normal text-muted-foreground">({unit})</span></Label>
+      <Input id={`np-${key}`} inputMode="numeric" value={String(rules[key])} onChange={(e) => setRules({ ...rules, [key]: Number(e.target.value.replace(/[^0-9]/g, "")) || 0 })} className="h-11 text-[15.5px]" />
+    </div>
+  )
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle>New program</DialogTitle>
+          <DialogDescription>Start from a template and adjust its rules. It shows as Not launched until Dana Ortiz approves; then it's version 1.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label className="text-[15px]">Template</Label>
+              <Select value={template} onValueChange={pick}>
+                <SelectTrigger className="h-11 w-full text-[15.5px]"><SelectValue /></SelectTrigger>
+                <SelectContent>{templateIds.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="np-name" className="text-[15px]">Program name</Label>
+              <Input id="np-name" value={name} onChange={(e) => setName(e.target.value)} className="h-11 text-[15.5px]" placeholder="e.g. Distributor" />
+            </div>
+          </div>
+          {clash && <p className="-mt-2 text-[14px] text-bad">A program called {clean} already exists.</p>}
+          <div className="grid gap-1.5">
+            <Label htmlFor="np-what" className="text-[15px]">What it's for</Label>
+            <Input id="np-what" value={what} onChange={(e) => setWhat(e.target.value)} className="h-11 text-[15.5px]" />
+          </div>
+          <div>
+            <p className="mb-2 text-[14px] text-muted-foreground">Starting rules, from the {template} template. Change any of them.</p>
+            <div className="grid grid-cols-2 gap-3">
+              {field("autoApprove", "Auto-approve limit", "$")}
+              {field("reviewHours", "Review deadline", "business hours")}
+              {field("protectionDays", "Protection window", "days")}
+              {field("leadHours", "Lead acceptance", "hours")}
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="np-why" className="text-[15px]">Why</Label>
+            <Textarea id="np-why" value={why} onChange={(e) => setWhy(e.target.value)} rows={3} className="text-[15.5px]" placeholder="Who it's for and what the data shows. Dana reads this first." />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button disabled={!ok} onClick={send}><Send /> Send to Dana</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -153,14 +254,15 @@ export function OpsPrograms() {
   const { state } = useStore()
   const programs = useLivePrograms()
   const [propose, setPropose] = useState<ProgramId | null>(null)
-  const [launching, setLaunching] = useState(false)
+  const [launching, setLaunching] = useState<ProgramId | null>(null)
+  const [creating, setCreating] = useState(false)
   const mine = state.requests.filter((r) => r.from === people.revops.name)
   return (
     <div className="space-y-6">
       <PageHeader
         title="Programs and rules"
-        sub="You set programs up from templates and propose rule changes. Dana Ortiz approves them. Every change is a new version; nothing is edited in place."
-        actions={<Button onClick={() => setPropose("Reseller")}><PencilLine /> Propose a change</Button>}
+        sub="You create programs from templates and propose rule changes. Dana Ortiz approves them. Every change is a new version; nothing is edited in place."
+        actions={<><Button variant="outline" onClick={() => setPropose("Reseller")}><PencilLine /> Propose a change</Button><Button onClick={() => setCreating(true)}><Plus /> New program</Button></>}
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {programs.map((p) => {
@@ -171,7 +273,7 @@ export function OpsPrograms() {
               <div className="flex items-start justify-between gap-3">
                 <span className="flex items-center gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-[10px] bg-brand-soft text-primary"><Layers className="size-5" /></span>
-                  <span><b className="block text-[17px] text-foreground">{p.id}</b><span className="text-[13.5px] text-muted-foreground">{p.live ? `Rules version ${r.version}` : "Template only"}</span></span>
+                  <span><b className="block text-[17px] text-foreground">{p.id}</b><span className="text-[13.5px] text-muted-foreground">{p.live ? `Rules version ${r.version}` : p.template ? `New · from the ${p.template} template` : "Template only"}</span></span>
                 </span>
                 {p.live ? <Badge className="border-0 bg-ok-soft text-ok">Live</Badge> : <Badge variant="outline" className="border-dashed">Not launched</Badge>}
               </div>
@@ -186,7 +288,7 @@ export function OpsPrograms() {
                 {pending.length > 0 && <Badge className="border-0 bg-amber-soft text-amber-ink"><Clock3 /> {pending.length} with Dana</Badge>}
                 {p.live
                   ? <Button size="sm" variant="outline" className="ml-auto" onClick={() => setPropose(p.id)}><PencilLine /> Propose a change</Button>
-                  : !pending.length && <Button size="sm" className="ml-auto" onClick={() => setLaunching(true)}><Rocket /> Set up from the template</Button>}
+                  : !pending.length && <Button size="sm" className="ml-auto" onClick={() => setLaunching(p.id)}><Rocket /> {p.template ? "Send to Dana again" : "Set up from the template"}</Button>}
               </div>
             </Panel>
           )
@@ -210,8 +312,9 @@ export function OpsPrograms() {
         )}
       </Panel>
       <p className="text-[14px] text-muted-foreground">You can't approve your own changes (R-APR-2). Rules that are the same in every program, like nudges at 50% and escalation at 80%, are changed the same way.</p>
-      <ProposeDialog key={propose ?? "none"} program={propose} onClose={() => setPropose(null)} />
-      <LaunchDialog open={launching} onClose={() => setLaunching(false)} />
+      <ProposeDialog key={`propose-${propose ?? "none"}`} program={propose} onClose={() => setPropose(null)} />
+      <LaunchDialog key={`launch-${launching ?? "none"}`} program={launching} onClose={() => setLaunching(null)} />
+      <NewProgramDialog key={`new-${creating}`} open={creating} onClose={() => setCreating(false)} />
     </div>
   )
 }

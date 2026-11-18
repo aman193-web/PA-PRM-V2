@@ -81,5 +81,5 @@ export function useRevenue() {
 /** Programs with their live state: seeded ones, plus any RevOps launched from a template and the chief approved. */
 export function useLivePrograms() {
   const { state } = useStore()
-  return useMemo(() => programs.map((p) => ({ ...p, live: p.live || state.launched.includes(p.id) })), [state.launched])
+  return useMemo(() => [...programs, ...state.customPrograms].map((p) => ({ ...p, live: p.live || state.launched.includes(p.id) })), [state.launched, state.customPrograms])
 }

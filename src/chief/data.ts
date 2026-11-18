@@ -49,9 +49,20 @@ export const budget = {
 
 /* ---------- Programs: partner tracks, each with its own rules (BRD glossary; RevOps creates, the chief approves) ---------- */
 
-export type ProgramId = "Reseller" | "Services" | "Referral" | "Technology" | "Marketplace"
+/** The five seeded programs, plus any RevOps creates from a template (for example "Distributor"). */
+export type ProgramId = string
+export const templateIds = ["Reseller", "Services", "Referral", "Technology", "Marketplace"] as const
 
-export interface ProgramInfo { id: ProgramId; what: string; live: boolean; budget: number; spent: number }
+export interface ProgramInfo {
+  id: ProgramId
+  what: string
+  live: boolean
+  budget: number
+  spent: number
+  /** For a program RevOps created: the template it started from, and who set it up. */
+  template?: string
+  createdBy?: string
+}
 
 /** Budget figures are examples; they add up to the overall budget above. */
 export const programs: ProgramInfo[] = [
@@ -118,6 +129,8 @@ export interface ChangeRequest {
   patch?: Partial<Omit<RuleSet, "version" | "history">>
   /** Launches a program from its template (RevOps creates, the chief approves). */
   launch?: boolean
+  /** A brand-new program RevOps created; it's added as "Not launched" until approved. */
+  newProgram?: ProgramInfo
   /** For an autonomy change: which agent action, and the level asked for (the AI supervisor proposes). */
   agent?: string
   action?: string
