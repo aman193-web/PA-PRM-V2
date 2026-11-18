@@ -181,12 +181,13 @@ export const agents = [
   },
 ]
 
+/** Autonomy levels in plain words. The A0–A4 codes (R-AG-1) stay as small print. */
 export const autonomyLevels = [
-  { id: "A0", label: "Observe", means: "Only watches and logs. Does nothing anyone can see." },
-  { id: "A1", label: "Recommend", means: "Suggests what to do. A person decides and does it." },
+  { id: "A0", label: "Watch only", means: "Notes what it would do. Nobody sees anything; people do all the work." },
+  { id: "A1", label: "Suggest", means: "Shows a suggestion. A person decides and does the work." },
   { id: "A2", label: "Draft", means: "Prepares the work. A person checks it and sends it." },
-  { id: "A3", label: "Act with approval", means: "Does the work once a person says yes." },
-  { id: "A4", label: "Act alone within limits", means: "Does the work on its own, but only inside limits you set. Money is never included." },
+  { id: "A3", label: "Ask first", means: "Does the work after a person clicks yes." },
+  { id: "A4", label: "Automatic", means: "Does the work on its own, inside the limits set. Everything is logged and can be undone. Money is never automatic." },
 ] as const
 
 /** Rules that are the same in every program. */

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowRight, Ban, Cpu, Hourglass, Lock, Pause, Play, Power, Send, ShieldAlert } from "lucide-react"
+import { ArrowRight, Ban, Cpu, Hourglass, Lock, Pause, Play, Power, Send, ShieldAlert, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { EmptyState, PageHeader, Panel } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
@@ -13,11 +13,23 @@ import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
 import { agents as chiefAgents, autonomyLevels, type ChangeRequest } from "@/chief/data"
-import { levelIndex, levels, type AgentLogEntry, type Level } from "@/vendor/agents"
+import { levelIndex, levels, modelName, type AgentLogEntry, type Level } from "@/vendor/agents"
 import { useAgents, type LiveAction, type LiveAgent } from "@/vendor/useVendor"
 import { ActivityRow } from "@/vendor/screens/aisup/Activity"
 
 export const levelLabel = (l: string) => autonomyLevels.find((x) => x.id === l)?.label ?? l
+
+/** What one action looks like at a level, in plain words, and who does the work. */
+export function atLevel(action: string, l: string): { does: string; people: string } {
+  const a = action.charAt(0).toLowerCase() + action.slice(1)
+  switch (l) {
+    case "A0": return { does: `Notes when it would ${a}, and shows nobody.`, people: "People do all of it by hand." }
+    case "A1": return { does: `Suggests when to ${a}.`, people: "A person decides and does it." }
+    case "A2": return { does: `Prepares the work to ${a}.`, people: "A person checks it and sends it." }
+    case "A3": return { does: `Does it (${a}) after a person clicks yes.`, people: "A person approves every one." }
+    default: return { does: `Does it (${a}) on its own, inside the limits.`, people: "People see it in the log afterwards and can undo it." }
+  }
+}
 
 export function OutcomeBadge({ x }: { x: AgentLogEntry }) {
   if (x.outcome === "alone") return <Badge className="border-0 bg-secondary text-foreground">Acted alone</Badge>
@@ -40,7 +52,7 @@ function LevelSteps({ x, onPick, disabled }: { x: LiveAction; onPick?: (l: Level
   const cur = levelIndex(x.now)
   const cap = levelIndex(x.cap)
   return (
-    <ol className="grid w-full max-w-[300px] grid-cols-5 gap-1">
+    <ol className="grid w-full max-w-[460px] grid-cols-5 gap-1">
       {levels.map((l, i) => {
         const locked = i > cap
         const pendingHere = x.pending?.level === l
@@ -54,15 +66,16 @@ function LevelSteps({ x, onPick, disabled }: { x: LiveAction; onPick?: (l: Level
                   disabled={disabled || locked || i === cur || !onPick || (!!x.pending && i > cur)}
                   onClick={() => onPick?.(l)}
                   aria-label={`${l} ${levelLabel(l)}${locked ? ", not allowed" : ""}${i === cur ? ", current" : ""}`}
-                  className={cn("flex h-8 w-full items-center justify-center gap-0.5 rounded-[8px] text-[12.5px] font-semibold transition", cls, locked && "cursor-not-allowed opacity-50", onPick && !locked && i !== cur && !disabled && "hover:ring-2 hover:ring-primary/40")}
+                  className={cn("flex min-h-11 w-full flex-col items-center justify-center rounded-[8px] px-1 py-1 text-center leading-tight transition", cls, locked && "cursor-not-allowed opacity-50", onPick && !locked && i !== cur && !disabled && "hover:ring-2 hover:ring-primary/40")}
                 >
-                  {locked ? <Lock className="size-3" /> : null}{l}
+                  <span className="flex items-center gap-0.5 text-[12px] font-semibold">{locked ? <Lock className="size-3" /> : null}{levelLabel(l)}</span>
+                  <span className="text-[10.5px] opacity-75">{l}</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent className="max-w-[280px] text-[13.5px] leading-snug">
                 <div className="block">
-                  <p className="font-semibold">{l} · {levelLabel(l)}{i === cur ? " (now)" : pendingHere ? " (asked for)" : ""}</p>
-                  <p className="mt-1">{autonomyLevels.find((y) => y.id === l)?.means}</p>
+                  <p className="font-semibold">{levelLabel(l)} ({l}){i === cur ? " · now" : pendingHere ? " · asked for" : ""}</p>
+                  <p className="mt-1">{atLevel(x.label, l).does} {atLevel(x.label, l).people}</p>
                   {locked && <p className="mt-2 font-semibold">Not allowed: {x.capWhy ?? "above this action's limit"}</p>}
                 </div>
               </TooltipContent>
@@ -115,7 +128,7 @@ export function AiAgents() {
   const g = useAgents()
   return (
     <div className="space-y-6">
-      <PageHeader title="Agents" sub="The nine agents in the BRD. Lowering what an agent may do takes effect now; raising it goes to Dana Ortiz. Money, contracts, access, export, demotion and termination always need a person (R-AG-2)." />
+      <PageHeader title="Agents" sub="The nine agents the PRM's product team builds and ships with each release; they're installed for Brightline automatically. You decide how much each may do, which AI model it uses, and can pause it. Moving an agent down takes effect now; moving it up goes to Dana Ortiz. Money, contracts, access, export, demotion and termination always need a person (R-AG-2)." actions={<Button variant="outline" onClick={() => go("/v/models")}><Sparkles /> AI models</Button>} />
       <KillSwitch />
       <ul className="grid gap-4 lg:grid-cols-2">
         {g.roster.map((a) => {
@@ -154,13 +167,13 @@ function ChangeDialog({ a, x, to, onClose }: { a: LiveAgent; x: LiveAction; to: 
   const submit = () => {
     if (!raise) {
       dispatch({ type: "aiSetLevel", agent: a.id, action: x.id, level: to })
-      toast.success(`Lowered to ${to} · ${levelLabel(to)}`, { description: "In effect now, in every program. Dana Ortiz is told." })
+      toast.success(`Lowered to ${levelLabel(to)} (${to})`, { description: "In effect now, in every program. Dana Ortiz is told." })
     } else {
       const req: ChangeRequest = {
-        id: `CR-${21 + state.requests.length}`, kind: "autonomy", title: `${a.name}: ${x.label.charAt(0).toLowerCase()}${x.label.slice(1)} at ${to}`, programs: "all",
+        id: `CR-${21 + state.requests.length}`, kind: "autonomy", title: `${a.name}: ${x.label.charAt(0).toLowerCase()}${x.label.slice(1)}, ${levelLabel(to).toLowerCase()} (${to})`, programs: "all",
         from: "Lee Park", fromRole: "AI supervisor", at: NOW.toISOString(),
         current: `${x.now} · ${levelLabel(x.now)}`, proposed: `${to} · ${levelLabel(to)}`, why: why.trim(),
-        impact: [agentSpecific ?? `${autonomyLevels.find((l) => l.id === to)?.means}`, "Every action stays logged and can be reversed", "Lee Park or you can pause it in one click"],
+        impact: [`Today: ${atLevel(x.label, x.now).does} ${atLevel(x.label, x.now).people}`, `After: ${agentSpecific ?? `${atLevel(x.label, to).does} ${atLevel(x.label, to).people}`}`, "Every action stays logged and can be reversed", "Lee Park or you can pause it in one click"],
         guardrail: "Money, contracts, access, data export, tier demotion and partner termination always need a person (R-AG-2).",
         status: "pending", agent: a.id, action: x.id, level: to,
       }
@@ -173,13 +186,22 @@ function ChangeDialog({ a, x, to, onClose }: { a: LiveAgent; x: LiveAction; to: 
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>{raise ? `Ask Dana to raise it to ${to}?` : `Lower it to ${to} now?`}</DialogTitle>
+          <DialogTitle>{raise ? `Ask Dana to move it up to ${levelLabel(to)}?` : `Move it down to ${levelLabel(to)} now?`}</DialogTitle>
           <DialogDescription>{a.name} · {x.label}. {raise ? "Raising autonomy needs the channel chief (R-AG-1). Nothing changes until it's approved." : "Lowering takes effect straight away, in every program. Dana Ortiz and the partner managers are told."}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-[12px] border px-4 py-3 text-[15px]">
-          <p className="text-muted-foreground">{x.now} · {levelLabel(x.now)} → <b className="text-foreground">{to} · {levelLabel(to)}</b></p>
-          <p className="mt-1 text-foreground">{agentSpecific ?? autonomyLevels.find((l) => l.id === to)?.means}</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {[["Today", x.now], ["After the change", to]].map(([k, l]) => (
+            <div key={k} className={cn("rounded-[12px] border px-4 py-3", k !== "Today" && "border-primary/40 bg-brand-soft/30")}>
+              <p className="text-[13px] font-semibold text-muted-foreground">{k}</p>
+              <p className="text-[16px] font-bold text-foreground">{levelLabel(l)} <span className="text-[12.5px] font-normal text-muted-foreground">{l}</span></p>
+              <p className="mt-1 text-[14.5px] text-foreground">{atLevel(x.label, l).does}</p>
+              <p className="mt-1 text-[14px] text-muted-foreground">{atLevel(x.label, l).people}</p>
+            </div>
+          ))}
         </div>
+        <p className="rounded-[12px] bg-muted/60 px-4 py-2.5 text-[14.5px] text-foreground">{raise
+          ? levelIndex(to) >= 3 ? "People stop doing this by hand. They see the agent's work in the log instead of before it happens." : "People keep the final say, but start from the agent's work."
+          : "People take this work back. Nothing the agent already did is changed."}{agentSpecific ? ` For this agent: ${agentSpecific}` : ""}</p>
         {raise && (
           <div className="grid gap-1.5">
             <Label htmlFor="why" className="text-[15px]">Why</Label>
@@ -188,7 +210,7 @@ function ChangeDialog({ a, x, to, onClose }: { a: LiveAgent; x: LiveAction; to: 
         )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button disabled={raise && !why.trim()} onClick={submit}>{raise ? <><Send /> Send to Dana</> : "Lower now"}</Button>
+          <Button disabled={raise && !why.trim()} onClick={submit}>{raise ? <><Send /> Send to Dana</> : "Move down now"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -208,19 +230,19 @@ export function AgentDetail({ id = "" }: { id?: string }) {
       <PageHeader
         back={{ label: "Agents", href: "/v/agents" }}
         title={<span className="flex flex-wrap items-center gap-3">{a.name} <AgentStatus a={a} /></span>}
-        sub={<>{a.job} · Stage {a.stage} · {a.model}, prompt {a.prompt}</>}
+        sub={<>{a.job}. Installed with the PRM (Stage {a.stage}, {a.prompt}) · runs on <a href="#/v/models" className="font-medium text-primary hover:underline">{modelName(state.agentModels[a.id])}</a></>}
         actions={!state.agentLayerPaused && <Button size="lg" variant={a.pausedSelf ? "default" : "outline"} onClick={() => { dispatch({ type: "toggleAgent", id: a.id, by: "Lee Park" }); toast(a.pausedSelf ? `${a.name} resumed` : `${a.name} paused`, { description: a.pausedSelf ? "It picks up where it stopped." : "It stops now. People take over its work until you resume it." }) }}>{a.pausedSelf ? <><Play /> Resume</> : <><Pause /> Pause this agent</>}</Button>}
       />
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
-          <Panel title={<span className="flex items-center gap-2"><Cpu className="size-5 text-primary" /> What it may do</span>} sub="Per action, in every program. Click a lower level to lower it now; a higher one asks Dana." bodyClass="px-0 sm:px-0 pb-1">
+          <Panel title={<span className="flex items-center gap-2"><Cpu className="size-5 text-primary" /> What it may do</span>} sub="Per action, in every program. Pick a level to the left to move it down now; to the right asks Dana Ortiz first. Hover any level to see what it means." bodyClass="px-0 sm:px-0 pb-1">
             <ul>
               {a.actions.map((x) => (
                 <li key={x.id} className={cn("border-t px-5 py-4 sm:px-6", x.paused && "bg-amber-soft/30")}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <span className="min-w-0 flex-1 basis-56">
                       <b className="flex flex-wrap items-center gap-2 text-[15.5px] text-foreground">{x.label}{x.id === a.headline && <Badge variant="outline">Main action</Badge>}{x.paused && <Badge className="border-0 bg-amber-soft text-amber-ink">Paused</Badge>}</b>
-                      <span className="text-[14px] text-muted-foreground">{x.never ? x.capWhy : `Now ${x.now} · ${levelLabel(x.now)}${x.cap !== "A4" ? ` · can't go above ${x.cap}` : ""}`}</span>
+                      <span className="text-[14px] text-muted-foreground">{x.never ? x.capWhy : `Now: ${levelLabel(x.now)} (${x.now})${x.cap !== "A4" ? ` · can't go above ${levelLabel(x.cap)}` : ""}`}</span>
                     </span>
                     {!x.never && !state.agentLayerPaused && !a.pausedSelf && (
                       <Button size="sm" variant="ghost" onClick={() => dispatch({ type: "aiPauseAction", key: x.key })}>{x.paused ? <><Play /> Resume</> : <><Pause /> Pause</>}</Button>
@@ -230,7 +252,7 @@ export function AgentDetail({ id = "" }: { id?: string }) {
                     <LevelSteps x={x} onPick={(to) => setChange({ x, to })} disabled={a.paused} />
                   </div>
                   {x.cap !== "A4" && !x.never && <p className="mt-2 flex gap-1.5 text-[13.5px] text-muted-foreground"><Lock className="mt-0.5 size-3.5 shrink-0" /> {x.capWhy}</p>}
-                  {x.pending && <p className="mt-2 flex gap-1.5 text-[14px] font-medium text-primary"><Hourglass className="mt-0.5 size-4 shrink-0" /> {x.pending.level} is waiting for Dana Ortiz · asked {ago(x.pending.at)}</p>}
+                  {x.pending && <p className="mt-2 flex gap-1.5 text-[14px] font-medium text-primary"><Hourglass className="mt-0.5 size-4 shrink-0" /> Moving up to {levelLabel(x.pending.level ?? "")} is waiting for Dana Ortiz · asked {ago(x.pending.at)}</p>}
                 </li>
               ))}
             </ul>

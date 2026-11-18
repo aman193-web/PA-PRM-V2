@@ -54,6 +54,7 @@ function useNav(): NavItem[] {
       { key: "agents", label: "Agents", href: "/v/agents", icon: Cpu, mobile: true },
       { key: "activity", label: "Agent activity", short: "Activity", href: "/v/activity", icon: Bot, count: g.overrides.length, mobile: true },
       { key: "cost", label: "AI cost", short: "Cost", href: "/v/cost", icon: Coins, mobile: true },
+      { key: "models", label: "AI models", short: "Models", href: "/v/models", icon: Sparkles },
     ]
   if (me.role === "revops")
     return [

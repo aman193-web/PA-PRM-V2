@@ -63,7 +63,7 @@ function Requests({ list }: { list: ChangeRequest[] }) {
 function Agents() {
   const { state, dispatch } = useStore()
   return (
-    <Panel title={<span className="flex items-center gap-2"><Cpu className="size-5 text-primary" /> AI agent autonomy</span>} sub="Agents work across every program. A0 observes … A4 acts alone within limits. Every action is logged and can be reversed.">
+    <Panel title={<span className="flex items-center gap-2"><Cpu className="size-5 text-primary" /> AI agent autonomy</span>} sub="Agents work across every program. Each runs from Watch only to Automatic; Lee Park (AI supervisor) tunes them and you approve any move up. Every action is logged and can be reversed.">
       {state.agentLayerPaused && <p className="mb-4 flex gap-2 rounded-[12px] border border-bad/40 bg-bad-soft/40 px-4 py-3 text-[15px] text-foreground"><ShieldAlert className="mt-0.5 size-4 shrink-0 text-bad" /> Lee Park (AI supervisor) has paused every agent with the kill switch. Partner managers are deciding by hand.</p>}
       <ul className="grid gap-4 lg:grid-cols-2">
         {agents.map((a) => {
@@ -95,7 +95,7 @@ function Agents() {
                   <li key={l.id}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" aria-label={`${l.id} ${l.label}`} className={cn("w-full cursor-help rounded-[8px] px-1 py-1.5 text-center text-[12.5px] font-semibold", i === idx ? "bg-primary text-primary-foreground" : i < idx ? "bg-brand-soft text-primary" : "bg-muted text-muted-foreground")}>{l.id}</button>
+                        <button type="button" aria-label={`${l.id} ${l.label}`} className={cn("flex min-h-11 w-full cursor-help flex-col items-center justify-center rounded-[8px] px-1 py-1 text-center leading-tight", i === idx ? "bg-primary text-primary-foreground" : i < idx ? "bg-brand-soft text-primary" : "bg-muted text-muted-foreground")}><span className="text-[11.5px] font-semibold">{l.label}</span><span className="text-[10.5px] opacity-75">{l.id}</span></button>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-[280px] text-[13.5px] leading-snug">
                         <div className="block">

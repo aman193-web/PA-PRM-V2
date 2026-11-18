@@ -151,7 +151,7 @@ export const agents: Item[] = [
 }))
 
 rules.push(
-  r("R-AG-1", "agents", "Autonomy levels A0–A4", "A0 observe, A1 recommend, A2 draft, A3 act with approval, A4 act alone within limits. Set per tenant, program and action. Example: the Deal Desk agent may auto-approve clean deals under the threshold (A4) but only recommend above it.", "specified", [{ doc: "BRD", ref: "§10" }, { doc: "PA-PRD", ref: "p.17" }], { stage: "0", tags: ["autonomy"] }),
+  r("R-AG-1", "agents", "Autonomy levels A0–A4", "Shown in plain words: A0 watch only, A1 suggest, A2 draft, A3 ask first (acts after a person says yes), A4 automatic (acts alone within limits). Set per tenant, program and action. Example: the Deal Desk agent may auto-approve clean deals under the threshold (A4) but only recommend above it.", "specified", [{ doc: "BRD", ref: "§10" }, { doc: "PA-PRD", ref: "p.17" }], { stage: "0", tags: ["autonomy"] }),
   r("R-AG-2", "agents", "Always human, can't be raised", "Money, contracts, access, data export, tier demotion and partner termination always need a human. This limit can't be raised.", "specified", [{ doc: "BRD", ref: "§10" }, { doc: "Arch", ref: "§8" }], { stage: "0", tags: ["can ai move money", "agent export"] }),
   r("R-AG-3", "agents", "Kill switch", "Pause any agent, action type or the whole agent layer; takes effect within seconds.", "specified", [{ doc: "Personas" }], { stage: "0" }),
   r("R-AG-4", "agents", "Agents act as the user", "Agents get exactly the permissions of the user or service account they act for. Every tool call is re-authorised and fails closed.", "proposed", [{ doc: "Arch", ref: "§8" }], { stage: "0" }),

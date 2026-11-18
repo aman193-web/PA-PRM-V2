@@ -9,7 +9,7 @@ import { ago } from "@/lib/format"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
 import { useStore } from "@/store"
-import { agentRoster, type AgentLogEntry } from "@/vendor/agents"
+import { agentRoster, modelName, type AgentLogEntry } from "@/vendor/agents"
 import { useAgents } from "@/vendor/useVendor"
 import { OutcomeBadge } from "@/vendor/screens/aisup/Agents"
 
@@ -34,7 +34,7 @@ export function ActivityRow({ x, hideAgent, onOpen }: { x: AgentLogEntry; hideAg
 }
 
 function Detail({ x, onClose }: { x: AgentLogEntry | null; onClose: () => void }) {
-  const { dispatch } = useStore()
+  const { state, dispatch } = useStore()
   const roster = agentRoster.find((a) => a.id === x?.agent)
   return (
     <Sheet open={!!x} onOpenChange={(o) => !o && onClose()}>
@@ -56,7 +56,7 @@ function Detail({ x, onClose }: { x: AgentLogEntry | null; onClose: () => void }
                 <ul className="mt-1.5 space-y-1.5">{x.evidence.map((e) => <li key={e} className="flex gap-2.5 text-[15px] text-foreground"><span className="mt-2.5 size-1.5 shrink-0 rounded-full bg-primary" />{e}</li>)}</ul>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-[12px] bg-surface-2/60 px-4 py-3 text-[14.5px]">
-                <div><dt className="text-muted-foreground">Model</dt><dd className="text-foreground">{roster?.model}</dd></div>
+                <div><dt className="text-muted-foreground">Model</dt><dd className="text-foreground">{modelName(state.agentModels[x.agent] ?? "")}</dd></div>
                 <div><dt className="text-muted-foreground">Prompt version</dt><dd className="font-mono text-[13.5px] text-foreground">{roster?.prompt}</dd></div>
                 <div><dt className="text-muted-foreground">Cost</dt><dd className="text-foreground">${x.cost.toFixed(2)}</dd></div>
                 <div><dt className="text-muted-foreground">Logged as</dt><dd className="font-mono text-[13.5px] text-foreground">{x.id}</dd></div>

@@ -53,7 +53,7 @@ export function AiHome() {
                 <li key={a.id} className="border-t">
                   <a href={`#/v/agent/${a.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 hover:bg-muted/50 sm:grid-cols-[minmax(0,1fr)_200px_auto] sm:px-6">
                     <span className="min-w-0"><b className="block truncate text-[15px] text-foreground">{a.name}</b><span className="block truncate text-[13.5px] text-muted-foreground">{a.job}</span></span>
-                    <span className="hidden text-[14px] text-foreground sm:block">{a.level} · {levelLabel(a.level)}</span>
+                    <span className="hidden text-[14px] text-foreground sm:block">{levelLabel(a.level)} <span className="text-muted-foreground">({a.level})</span></span>
                     <AgentStatus a={a} />
                   </a>
                 </li>

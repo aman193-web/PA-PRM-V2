@@ -125,6 +125,25 @@ export const agentRoster: AgentInfo[] = [
 ]
 
 export const actionKey = (agent: string, action: string) => `${agent}.${action}`
+
+/** AI models IT has approved for Brightline (the provider is a data processor in the security package). Costs are example figures. */
+export interface ModelOption { id: string; name: string; tier: string; costPerAction: number; goodFor: string }
+export const modelCatalog: ModelOption[] = [
+  { id: "haiku", name: "Claude Haiku 5.5", tier: "Fast", costPerAction: 0.02, goodFor: "Simple, high-volume work: reminders, checks, flags" },
+  { id: "sonnet", name: "Claude Sonnet 5.5", tier: "Balanced", costPerAction: 0.2, goodFor: "Judgement: deal advice, credit splits, answering questions" },
+  { id: "opus", name: "Claude Opus 5.5", tier: "Most capable", costPerAction: 0.6, goodFor: "The hardest reasoning, at the highest cost" },
+]
+export const modelProvider = { name: "Anthropic", approvedBy: "Kai Brennan (IT)", approvedAt: "2026-09-04", dataUse: "Brightline data isn't used to train models. Prompts and answers are logged (R-AG-5)." }
+export const modelName = (id: string) => modelCatalog.find((m) => m.id === id)?.name ?? id
+/** The model each agent shipped with. "Large" agents use the balanced model, "small" ones the fast model. */
+export const initialAgentModels: Record<string, string> = Object.fromEntries(agentRoster.map((a) => [a.id, a.model.startsWith("Large") ? "sonnet" : "haiku"]))
+/** Rough monthly cost if an agent ran on another model: its actual cost scaled by the price difference. */
+export const estimateCost = (agentId: string, modelId: string) => {
+  const a = agentRoster.find((x) => x.id === agentId)!
+  const base = modelCatalog.find((m) => m.id === initialAgentModels[agentId])!.costPerAction
+  const next = modelCatalog.find((m) => m.id === modelId)!.costPerAction
+  return Math.round(a.month.cost * (next / base))
+}
 export const initialActionLevels: Record<string, Level> = Object.fromEntries(agentRoster.flatMap((a) => a.actions.map((x) => [actionKey(a.id, x.id), x.level])))
 export const initialAgentLevels: Record<string, Level> = Object.fromEntries(agentRoster.map((a) => [a.id, a.actions.find((x) => x.id === a.headline)!.level]))
 

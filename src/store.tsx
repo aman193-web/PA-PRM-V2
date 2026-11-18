@@ -20,7 +20,7 @@ import {
   type AuditEntry, type Connection, type FieldMapping, type GroupMap, type StaffUser,
 } from "@/vendor/admin"
 import {
-  actionKey, agentLogSeed, agentRoster, aisupFeedSeed, initialActionLevels, initialAgentLevels, type AgentLogEntry,
+  actionKey, agentLogSeed, agentRoster, aisupFeedSeed, initialActionLevels, initialAgentLevels, initialAgentModels, modelName, type AgentLogEntry,
 } from "@/vendor/agents"
 
 /** Something that happened on the partner side. `rep` limits it to that person (and their company's admin). Ridgeway unless `companyId` says otherwise. */
@@ -100,6 +100,9 @@ export interface State {
   agentLayerPaused: boolean
   agentLog: AgentLogEntry[]
   aisupFeed: ActivityItem[]
+  /** Which approved AI model each agent runs on, and the default for anything new. */
+  agentModels: Record<string, string>
+  defaultModel: string
 }
 
 const initial: State = {
@@ -187,6 +190,8 @@ const initial: State = {
   agentLayerPaused: false,
   agentLog: agentLogSeed,
   aisupFeed: aisupFeedSeed,
+  agentModels: initialAgentModels,
+  defaultModel: "sonnet",
   agentLevels: { ...Object.fromEntries(agentSeed.map((a) => [a.id, a.level])), ...initialAgentLevels },
   chiefFeed: [
     { id: "cf1", at: "2026-10-28T10:20:00", text: "Kestrel Energy passed 80% of its review deadline with Jordan Lee", href: "/c/approval/reg-REG-2038" },
@@ -282,6 +287,8 @@ type Action =
   | { type: "aiPauseAction"; key: string }
   | { type: "aiPauseAll" }
   | { type: "aiReview"; id: string }
+  | { type: "aiSetModel"; agent: string; model: string }
+  | { type: "aiSetDefaultModel"; model: string }
 
 const stamp = () => NOW.toISOString()
 const log = (s: State, text: string, href?: string): ActivityItem[] => [
@@ -1087,6 +1094,17 @@ function core(s: State, a: Action): State {
     }
     case "aiReview":
       return { ...s, agentLog: s.agentLog.map((x) => (x.id === a.id ? { ...x, reviewed: true } : x)) }
+    case "aiSetModel": {
+      const from = modelName(s.agentModels[a.agent])
+      return {
+        ...s,
+        agentModels: { ...s.agentModels, [a.agent]: a.model },
+        aisupFeed: item(s.aisupFeed, `You moved the ${agentName(a.agent)} from ${from} to ${modelName(a.model)}`, "/v/models"),
+        chiefFeed: chiefLog(s, `${AISUP} (AI supervisor) moved the ${agentName(a.agent)} to ${modelName(a.model)}`, "/c/program"),
+      }
+    }
+    case "aiSetDefaultModel":
+      return { ...s, defaultModel: a.model, aisupFeed: item(s.aisupFeed, `You made ${modelName(a.model)} the default model`, "/v/models") }
 
     case "toggleAgent": {
       const resume = s.pausedAgents.includes(a.id)
@@ -1271,6 +1289,8 @@ function auditOf(s: State, a: Action): Audit | null {
     case "aiRequest": return P(AISUP, "Agents", `Asked for: ${a.req.title}`)
     case "aiPauseAction": return P(AISUP, "Agents", `${s.pausedActions.includes(a.key) ? "Resumed" : "Paused"} one action of the ${agentName(a.key.split(".")[0])}`)
     case "aiPauseAll": return P(AISUP, "Agents", s.agentLayerPaused ? "Turned every AI agent back on" : "Paused every AI agent (kill switch)")
+    case "aiSetModel": return P(AISUP, "Agents", `Moved the ${agentName(a.agent)} from ${modelName(s.agentModels[a.agent])} to ${modelName(a.model)}`)
+    case "aiSetDefaultModel": return P(AISUP, "Agents", `Made ${modelName(a.model)} the default AI model`)
     default: return null
   }
 }

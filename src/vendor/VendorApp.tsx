@@ -31,6 +31,7 @@ import { AiHome } from "@/vendor/screens/aisup/AiHome"
 import { AgentDetail, AiAgents } from "@/vendor/screens/aisup/Agents"
 import { AiActivity } from "@/vendor/screens/aisup/Activity"
 import { AiCost } from "@/vendor/screens/aisup/Cost"
+import { AiModels } from "@/vendor/screens/aisup/Models"
 
 const journeys: Record<VendorRoleId, JourneysConfig> = { revops: opsJourneys, ae: aeJourneys, ceo: ceoJourneys, cro: croJourneys, it: itJourneys, aisup: aisupJourneys }
 
@@ -133,6 +134,7 @@ function aisupScreen(page: string, id?: string): [string, ReactNode] {
     case "agent": return ["agents", <AgentDetail id={id} />]
     case "activity": return ["activity", <AiActivity tab={id} />]
     case "cost": return ["cost", <AiCost />]
+    case "models": return ["models", <AiModels />]
     case "approvals": case "approval": return ["home", <NotForRole what="Approvals" why="Raising autonomy is approved by the channel chief, and the business decisions agents raise stay with their owners." />]
     default: return ["home", <AiHome />]
   }
