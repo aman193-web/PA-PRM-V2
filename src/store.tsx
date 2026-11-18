@@ -272,6 +272,10 @@ type Action =
   | { type: "itMerge"; exceptionId: string }
   | { type: "itRetry"; writeId: string }
   | { type: "itExport"; rows: number }
+  | { type: "itAddUser"; user: StaffUser }
+  | { type: "itSetRole"; userId: string; role: string }
+  | { type: "itSetStatus"; userId: string; status: "active" | "deactivated" }
+  | { type: "itResendInvite"; userId: string }
   // AI supervisor: lowering is immediate, raising goes to the channel chief (R-AG-1)
   | { type: "aiSetLevel"; agent: string; action: string; level: string }
   | { type: "aiRequest"; req: ChangeRequest }
@@ -1008,6 +1012,35 @@ function core(s: State, a: Action): State {
     }
     case "itExport":
       return { ...s, itFeed: item(s.itFeed, `You exported the audit log (${a.rows} entries)`, "/v/audit") }
+    case "itAddUser":
+      return {
+        ...s,
+        staff: [...s.staff, a.user],
+        itFeed: item(s.itFeed, `You invited ${a.user.name} as ${a.user.role}`, "/v/users"),
+        chiefFeed: a.user.role === "Partner manager" ? chiefLog(s, `${IT} (IT) added ${a.user.name} as a partner manager. Assign them partners when they're ready`, "/c/team") : s.chiefFeed,
+      }
+    case "itSetRole": {
+      const u = s.staff.find((x) => x.id === a.userId)!
+      return {
+        ...s,
+        staff: s.staff.map((x) => (x.id === a.userId ? { ...x, role: a.role, changed: { by: IT, at: stamp(), text: `Role changed from ${u.role} to ${a.role}` } } : x)),
+        itFeed: item(s.itFeed, `You changed ${u.name}'s role from ${u.role} to ${a.role}`, "/v/users"),
+      }
+    }
+    case "itSetStatus": {
+      const u = s.staff.find((x) => x.id === a.userId)!
+      const off = a.status === "deactivated"
+      return {
+        ...s,
+        staff: s.staff.map((x) => (x.id === a.userId ? { ...x, status: a.status, changed: { by: IT, at: stamp(), text: off ? "Deactivated and signed out everywhere" : "Reactivated" } } : x)),
+        itFeed: item(s.itFeed, `You ${off ? "deactivated" : "reactivated"} ${u.name}`, "/v/users"),
+        chiefFeed: off && u.partners ? chiefLog(s, `${IT} (IT) deactivated ${u.name}. ${u.partners} partners need a new partner manager`, "/c/team") : s.chiefFeed,
+      }
+    }
+    case "itResendInvite": {
+      const u = s.staff.find((x) => x.id === a.userId)!
+      return { ...s, staff: s.staff.map((x) => (x.id === a.userId ? { ...x, changed: { by: IT, at: stamp(), text: "Invitation sent again" } } : x)), itFeed: item(s.itFeed, `You sent ${u.name}'s invitation again`, "/v/users") }
+    }
 
     /* ---------- AI supervisor ---------- */
     case "aiSetLevel": {
@@ -1225,6 +1258,10 @@ function auditOf(s: State, a: Action): Audit | null {
     case "itMerge": return P(IT, "Data", "Merged ACME Mfg. Inc. into Acme Manufacturing in Salesforce")
     case "itRetry": return P(IT, "Integrations", `Retried a Salesforce write: ${s.crmWrites.find((w) => w.id === a.writeId)?.text}`)
     case "itExport": return P(IT, "Access", `Exported the audit log (${a.rows} entries)`)
+    case "itAddUser": return P(IT, "Access", `Invited ${a.user.name} (${a.user.email}) as ${a.user.role}`)
+    case "itSetRole": return P(IT, "Access", `Changed ${s.staff.find((u) => u.id === a.userId)?.name}'s role to ${a.role}`)
+    case "itSetStatus": return P(IT, "Access", `${a.status === "deactivated" ? "Deactivated" : "Reactivated"} ${s.staff.find((u) => u.id === a.userId)?.name}`)
+    case "itResendInvite": return P(IT, "Access", `Sent ${s.staff.find((u) => u.id === a.userId)?.name}'s invitation again`)
     case "aiSetLevel": return P(AISUP, "Agents", `Lowered the ${agentName(a.agent)} to ${a.level}: ${agentRoster.find((x) => x.id === a.agent)?.actions.find((x) => x.id === a.action)?.label.toLowerCase()}`)
     case "aiRequest": return P(AISUP, "Agents", `Asked for: ${a.req.title}`)
     case "aiPauseAction": return P(AISUP, "Agents", `${s.pausedActions.includes(a.key) ? "Resumed" : "Paused"} one action of the ${agentName(a.key.split(".")[0])}`)

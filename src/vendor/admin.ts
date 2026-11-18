@@ -131,7 +131,12 @@ export interface StaffUser {
   title: string
   role: string
   group: string
-  status: "active" | "leaving" | "deactivated"
+  status: "active" | "invited" | "leaving" | "deactivated"
+  email?: string
+  /** Okta users come from a group through SCIM; IT can also add a person directly (a contractor, or before Okta is set up). */
+  source?: "okta" | "manual"
+  /** Who changed this user last, and what, for the user panel. */
+  changed?: { by: string; at: string; text: string }
   lastSignIn?: string
   /** For a leaver: when Okta deactivates them, and partners still assigned to them. */
   leavesOn?: string
@@ -177,6 +182,18 @@ export const groupsSeed: GroupMap[] = [
   { id: "g6", group: "PRM-Sales-Leadership", people: 1, role: "CRO", status: "mapped" },
   { id: "g7", group: "PRM-AI-Supervisors", people: 1, role: "AI supervisor", status: "mapped" },
   { id: "g8", group: "PRM-Admins", people: 2, role: "IT / CRM admin", status: "mapped" },
+]
+
+/** Every Brightline role in the PRM, with what each sees. IT gives these to people or Okta groups. */
+export const staffRoles = [
+  { role: "CEO / CFO", sees: "All revenue and pipeline; approves the model and large rewards" },
+  { role: "CRO", sees: "All partner pipeline and revenue; decides nothing" },
+  { role: "Channel chief", sees: "Every partner and partner manager; approves escalations and rules" },
+  { role: "Partner manager", sees: "Their assigned partners in full; others by name only" },
+  { role: "Field seller", sees: "Their own accounts and the partners on them" },
+  { role: "RevOps", sees: "All pipeline and revenue; exceptions and program rules" },
+  { role: "IT / CRM admin", sees: "Connections, users and the audit log; no program rules or credit" },
+  { role: "AI supervisor", sees: "The agents, their activity and cost" },
 ]
 
 /** PRM roles a group can map to, with what each sees. Partner users are managed by each partner's own admin. */
