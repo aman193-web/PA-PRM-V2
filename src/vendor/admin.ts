@@ -135,6 +135,8 @@ export interface StaffUser {
   email?: string
   /** Okta users come from a group through SCIM; IT can also add a person directly (a contractor, or before Okta is set up). */
   source?: "okta" | "manual"
+  /** How a person IT added signs in: their existing Brightline (Okta) login, or a contractor account IT creates in Okta first. Never a PRM password. */
+  signIn?: "sso" | "contractor"
   /** Who changed this user last, and what, for the user panel. */
   changed?: { by: string; at: string; text: string }
   lastSignIn?: string

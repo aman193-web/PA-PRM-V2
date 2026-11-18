@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Bot, Mail, Send, Settings2, ShieldCheck, UserMinus, UserPlus, Users, UserCheck } from "lucide-react"
+import { Bot, KeyRound, LogIn, Mail, Send, Settings2, ShieldCheck, TriangleAlert, UserMinus, UserPlus, Users, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader, Panel } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
@@ -44,19 +44,26 @@ function AddUserDialog({ open, onClose }: { open: boolean; onClose: () => void }
   const [email, setEmail] = useState("")
   const [title, setTitle] = useState("")
   const [role, setRole] = useState("")
+  const [contractorOk, setContractorOk] = useState(false)
   const mail = email.trim().toLowerCase()
   const validMail = /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(mail)
+  // Demo rule: a brightline.io address already has an Okta login. Anyone else needs a contractor account in Okta first (G50).
+  const inOkta = validMail && mail.endsWith("@brightline.io")
   const exists = state.staff.some((u) => u.email?.toLowerCase() === mail || u.name.toLowerCase() === name.trim().toLowerCase())
-  const ok = name.trim().length >= 3 && validMail && !exists && !!role
+  const ok = name.trim().length >= 3 && validMail && !exists && !!role && (inOkta || contractorOk)
   const add = () => {
-    const user: StaffUser = { id: `u-${Date.now()}`, name: name.trim(), title: title.trim() || role, role, email: mail, group: "Added directly", status: "invited", source: "manual", changed: { by: "Kai Brennan", at: NOW.toISOString(), text: "Invited by email" } }
+    const user: StaffUser = {
+      id: `u-${Date.now()}`, name: name.trim(), title: title.trim() || role, role, email: mail, status: "invited", source: "manual",
+      signIn: inOkta ? "sso" : "contractor", group: inOkta ? "Added directly" : "Okta contractor account",
+      changed: { by: "Kai Brennan", at: NOW.toISOString(), text: inOkta ? "Invitation emailed: a sign-in link to Brightline SSO" : "Okta contractor account created; invitation emailed" },
+    }
     dispatch({ type: "itAddUser", user })
-    toast.success(`${user.name} is invited`, { description: `They sign in with Brightline SSO and MFA as ${role}. Logged in the audit log.` })
+    toast.success(`Invitation sent to ${user.email}`, { description: "A sign-in link, no password. They sign in with Brightline SSO and MFA; the account turns Active on their first sign-in." })
     onClose()
   }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Add a user</DialogTitle>
           <DialogDescription>For someone who isn't in an Okta group yet, such as a contractor. Most people arrive from Okta automatically.</DialogDescription>
@@ -68,6 +75,18 @@ function AddUserDialog({ open, onClose }: { open: boolean; onClose: () => void }
           </div>
           <div className="grid gap-1.5"><Label htmlFor="nu-mail" className="text-[15px]">Work email</Label><Input id="nu-mail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 text-[15.5px]" placeholder="name@brightline.io" /></div>
           {exists && <p className="-mt-2 text-[14px] text-bad">This person already has a PRM account.</p>}
+          {validMail && !exists && (inOkta ? (
+            <p className="-mt-2 flex gap-2 text-[14px] text-ok"><ShieldCheck className="mt-0.5 size-4 shrink-0" /> Found in Okta: they already have a Brightline login.</p>
+          ) : (
+            <div className="-mt-1 rounded-[12px] border border-amber/50 bg-amber-soft/40 px-3 py-2.5 text-[14px]">
+              <p className="flex gap-2 text-foreground"><TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-ink" /> Not a Brightline address, so this person has no Okta login and can't use SSO yet.</p>
+              <label className="mt-2 flex cursor-pointer items-start gap-2 text-foreground">
+                <input type="checkbox" checked={contractorOk} onChange={(e) => setContractorOk(e.target.checked)} className="mt-1 size-4 accent-[var(--primary)]" />
+                <span>Create a contractor account in Okta for them first, with an end date and MFA</span>
+              </label>
+              <p className="mt-1.5 text-[13px] text-muted-foreground">Letting them sign in with an email link instead, as partners do, isn't decided (G50).</p>
+            </div>
+          ))}
           <div className="grid gap-1.5">
             <Label className="text-[15px]">PRM role</Label>
             <Select value={role} onValueChange={setRole}>
@@ -76,6 +95,14 @@ function AddUserDialog({ open, onClose }: { open: boolean; onClose: () => void }
             </Select>
             {role && <p className="text-[14px] text-muted-foreground">Sees: {staffRoles.find((r) => r.role === role)?.sees}.</p>}
           </div>
+        </div>
+        <div className="rounded-[12px] bg-muted/60 px-4 py-3 text-[14px]">
+          <p className="flex items-center gap-2 font-semibold text-foreground"><KeyRound className="size-4 text-primary" /> How they sign in</p>
+          <ol className="mt-1.5 list-decimal space-y-0.5 pl-5 text-muted-foreground">
+            <li>They get an invitation email with a sign-in link. No password is ever sent.</li>
+            <li>The link opens Brightline's SSO (Okta): their normal company login, plus MFA.</li>
+            <li>On that first sign-in the account turns from Invited to Active, with this role.</li>
+          </ol>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
@@ -105,6 +132,7 @@ function ManageUser({ u, onClose }: { u: StaffUser | null; onClose: () => void }
           <dl className="grid grid-cols-2 gap-3 text-[14.5px]">
             <div className="rounded-[12px] bg-muted/60 px-3 py-2.5"><dt className="text-muted-foreground">Status</dt><dd className="font-semibold text-foreground capitalize">{u.status}</dd></div>
             <div className="rounded-[12px] bg-muted/60 px-3 py-2.5"><dt className="text-muted-foreground">Comes from</dt><dd className="font-semibold text-foreground">{fromOkta ? "Okta (SCIM)" : "Added by IT"}</dd></div>
+            <div className="col-span-2 rounded-[12px] bg-muted/60 px-3 py-2.5"><dt className="text-muted-foreground">Signs in with</dt><dd className="font-semibold text-foreground">{u.signIn === "contractor" ? "Brightline SSO, with an Okta contractor account" : "Brightline SSO (Okta) and MFA"} · no PRM password</dd></div>
             <div className="col-span-2 rounded-[12px] bg-muted/60 px-3 py-2.5"><dt className="text-muted-foreground">Group</dt><dd className="font-mono text-[13.5px] text-foreground">{u.group}</dd></div>
           </dl>
 
@@ -118,8 +146,15 @@ function ManageUser({ u, onClose }: { u: StaffUser | null; onClose: () => void }
             <Button className="w-full" disabled={role === u.role || off || self} onClick={() => { dispatch({ type: "itSetRole", userId: u.id, role }); toast.success(`${u.name} is now ${role}`, { description: "What they can see changes at once. Logged in the audit log." }) }}><ShieldCheck /> Change role</Button>
           </div>
 
+          {u.status === "invited" && (
+            <div className="rounded-[12px] border border-primary/30 bg-brand-soft/30 px-4 py-3 text-[14px]">
+              <p className="flex items-center gap-2 font-semibold text-foreground"><Mail className="size-4 text-primary" /> Waiting for their first sign-in</p>
+              <p className="mt-1 text-muted-foreground">An invitation went to {u.email}: a link to Brightline's SSO{u.signIn === "contractor" ? ", using the contractor account created in Okta" : ""}. No password. They sign in with MFA and the account turns Active.</p>
+              <Button size="sm" variant="outline" className="mt-2.5 bg-card" onClick={() => { dispatch({ type: "itSetStatus", userId: u.id, status: "active", firstSignIn: true }); toast.success(`${u.name} signed in`, { description: "Brightline SSO and MFA. The account is Active now." }) }}><LogIn /> Simulate their first sign-in (demo)</Button>
+            </div>
+          )}
           <div className="space-y-2 border-t pt-5">
-            {u.status === "invited" && <Button variant="outline" className="w-full" onClick={() => { dispatch({ type: "itResendInvite", userId: u.id }); toast.success("Invitation sent again", { description: u.email }) }}><Mail /> Resend invitation</Button>}
+            {u.status === "invited" && <Button variant="outline" className="w-full" onClick={() => { dispatch({ type: "itResendInvite", userId: u.id }); toast.success("Invitation sent again", { description: `${u.email} · a sign-in link, no password` }) }}><Mail /> Resend invitation</Button>}
             {off ? (
               <Button variant="outline" className="w-full" onClick={() => { dispatch({ type: "itSetStatus", userId: u.id, status: "active" }); toast.success(`${u.name} is active again`) }}><UserCheck /> Reactivate</Button>
             ) : (

@@ -274,7 +274,7 @@ type Action =
   | { type: "itExport"; rows: number }
   | { type: "itAddUser"; user: StaffUser }
   | { type: "itSetRole"; userId: string; role: string }
-  | { type: "itSetStatus"; userId: string; status: "active" | "deactivated" }
+  | { type: "itSetStatus"; userId: string; status: "active" | "deactivated"; firstSignIn?: boolean }
   | { type: "itResendInvite"; userId: string }
   // AI supervisor: lowering is immediate, raising goes to the channel chief (R-AG-1)
   | { type: "aiSetLevel"; agent: string; action: string; level: string }
@@ -1032,8 +1032,8 @@ function core(s: State, a: Action): State {
       const off = a.status === "deactivated"
       return {
         ...s,
-        staff: s.staff.map((x) => (x.id === a.userId ? { ...x, status: a.status, changed: { by: IT, at: stamp(), text: off ? "Deactivated and signed out everywhere" : "Reactivated" } } : x)),
-        itFeed: item(s.itFeed, `You ${off ? "deactivated" : "reactivated"} ${u.name}`, "/v/users"),
+        staff: s.staff.map((x) => (x.id === a.userId ? { ...x, status: a.status, lastSignIn: a.firstSignIn ? stamp() : x.lastSignIn, changed: { by: a.firstSignIn ? u.name : IT, at: stamp(), text: off ? "Deactivated and signed out everywhere" : a.firstSignIn ? "Signed in for the first time with Brightline SSO and MFA" : "Reactivated" } } : x)),
+        itFeed: item(s.itFeed, a.firstSignIn ? `${u.name} signed in for the first time and is now active` : `You ${off ? "deactivated" : "reactivated"} ${u.name}`, "/v/users"),
         chiefFeed: off && u.partners ? chiefLog(s, `${IT} (IT) deactivated ${u.name}. ${u.partners} partners need a new partner manager`, "/c/team") : s.chiefFeed,
       }
     }
@@ -1258,9 +1258,14 @@ function auditOf(s: State, a: Action): Audit | null {
     case "itMerge": return P(IT, "Data", "Merged ACME Mfg. Inc. into Acme Manufacturing in Salesforce")
     case "itRetry": return P(IT, "Integrations", `Retried a Salesforce write: ${s.crmWrites.find((w) => w.id === a.writeId)?.text}`)
     case "itExport": return P(IT, "Access", `Exported the audit log (${a.rows} entries)`)
-    case "itAddUser": return P(IT, "Access", `Invited ${a.user.name} (${a.user.email}) as ${a.user.role}`)
+    case "itAddUser": return P(IT, "Access", `Invited ${a.user.name} (${a.user.email}) as ${a.user.role}${a.user.signIn === "contractor" ? ", with a new Okta contractor account" : ""}`)
     case "itSetRole": return P(IT, "Access", `Changed ${s.staff.find((u) => u.id === a.userId)?.name}'s role to ${a.role}`)
-    case "itSetStatus": return P(IT, "Access", `${a.status === "deactivated" ? "Deactivated" : "Reactivated"} ${s.staff.find((u) => u.id === a.userId)?.name}`)
+    case "itSetStatus": {
+      const u = s.staff.find((x) => x.id === a.userId)
+      return a.firstSignIn
+        ? { actor: "Okta SSO", kind: "system", area: "Access", text: `${u?.name} signed in for the first time (SSO and MFA); account is active` }
+        : P(IT, "Access", `${a.status === "deactivated" ? "Deactivated" : "Reactivated"} ${u?.name}`)
+    }
     case "itResendInvite": return P(IT, "Access", `Sent ${s.staff.find((u) => u.id === a.userId)?.name}'s invitation again`)
     case "aiSetLevel": return P(AISUP, "Agents", `Lowered the ${agentName(a.agent)} to ${a.level}: ${agentRoster.find((x) => x.id === a.agent)?.actions.find((x) => x.id === a.action)?.label.toLowerCase()}`)
     case "aiRequest": return P(AISUP, "Agents", `Asked for: ${a.req.title}`)
