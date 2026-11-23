@@ -182,6 +182,18 @@ export function ItUsers() {
         sub="Brightline users come from Okta through SCIM, with MFA, and their Okta group sets their PRM role. You can also add a person directly and manage anyone's role and access."
         actions={<Button size="lg" onClick={() => setAdding(true)}><UserPlus /> Add user</Button>}
       />
+      {a.support.map((x) => (
+        <Panel key={x.id} className="border-amber/60" title={<span className="flex flex-wrap items-center gap-2"><KeyRound className="size-5 text-amber-ink" /> The PRM platform team asks for support access</span>} sub={`${x.engineer} · ticket ${x.ticket} · asked ${ago(x.at)}`}>
+          <p className="text-[15.5px] text-foreground">{x.reason}. They'd see Brightline's data <b>read-only for {x.hours} hours</b>, then access closes by itself. Nothing is opened until you approve, and every page they look at is in your audit log.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button onClick={() => { dispatch({ type: "itSupportDecide", id: x.id, approve: true }); toast.success(`${x.engineer} has read-only access for ${x.hours} hours`, { description: "Access closes by itself when the time is up." }) }}><ShieldCheck /> Approve, read-only</Button>
+            <Button variant="outline" onClick={() => { dispatch({ type: "itSupportDecide", id: x.id, approve: false }); toast.success("Declined", { description: "The platform team is told." }) }}>Decline</Button>
+          </div>
+        </Panel>
+      ))}
+      {state.platform.support.filter((x) => x.orgId === "brightline" && x.status === "granted").map((x) => (
+        <p key={x.id} className="flex flex-wrap items-center gap-2 rounded-[12px] bg-amber-soft/60 px-4 py-3 text-[14.5px] text-foreground"><KeyRound className="size-4 text-amber-ink" /> {x.engineer} (PRM platform team) has read-only access until {x.until ? new Date(x.until).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "later today"} · {x.ticket}</p>
+      ))}
       {a.newGroups.map((g) => <NewGroup key={g.id} g={g} />)}
       {state.staff.filter((u) => u.status === "leaving").map((u) => {
         const told = state.toldChief.includes(u.id)

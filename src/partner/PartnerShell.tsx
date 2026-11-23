@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from "react"
+import { PlatformBanner } from "@/components/PlatformBanner"
 import {
   Award, Bell, BookOpen, Briefcase, ClipboardCheck, Coins, GraduationCap, Home, Inbox, KeyRound, LogOut, Mail, Megaphone, Moon, Phone, Plus, Route, Search, ShieldCheck, Sparkles, Sun, TrendingUp, Users,
 } from "lucide-react"
@@ -336,7 +337,7 @@ export function PartnerShell({ section, children, onSignOut }: { section: string
             <PartnerSearch autoFocus onDone={() => setSearching(false)} />
           </SheetContent>
         </Sheet>
-        <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16">{children}</main>
+        <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16"><PlatformBanner />{children}</main>
       </div>
 
       {/* Phone navigation. Each role's main action (register, launch, log) sits in the middle; the executive has none. */}

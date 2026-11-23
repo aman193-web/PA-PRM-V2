@@ -328,7 +328,7 @@ export function useSales() {
 
 /* ---------------- IT / CRM admin ---------------- */
 
-export interface ItTask { id: string; title: string; sub: string; href: string; kind: "mapping" | "connector" | "group" | "leaver" | "merge" }
+export interface ItTask { id: string; title: string; sub: string; href: string; kind: "mapping" | "connector" | "group" | "leaver" | "merge" | "support" }
 
 /** What needs the CRM admin: AI-suggested mappings, connector requests, new Okta groups, leavers and record merges. */
 export function useAdmin() {
@@ -340,7 +340,9 @@ export function useAdmin() {
     const leavers = state.staff.filter((u) => u.status === "leaving" && u.partners && !state.toldChief.includes(u.id))
     const merge = state.exceptions.find((e) => e.kind === "match" && e.status === "resolved" && e.resolution?.choice === "same" && !state.merged.includes(e.id))
     const retrying = state.crmWrites.filter((w) => w.status !== "synced")
+    const support = state.platform.support.filter((x) => x.orgId === "brightline" && x.status === "requested")
     const tasks: ItTask[] = [
+      ...support.map((x) => ({ id: x.id, title: `PRM platform team asks for support access`, sub: `${x.engineer}, read-only for ${x.hours} hours: ${x.reason} (${x.ticket})`, href: "/v/users", kind: "support" as const })),
       ...(merge ? [{ id: `merge-${merge.id}`, title: "Merge ACME Mfg. Inc. into Acme Manufacturing", sub: `${merge.resolution?.by} confirmed they're the same company. Only you can merge records in Salesforce`, href: "/v/connections", kind: "merge" as const }] : []),
       ...requested.map((c) => ({ id: c.id, title: `Connect ${c.name}?`, sub: `${c.request?.by} (${c.request?.byRole}) asked for it`, href: "/v/connections", kind: "connector" as const })),
       ...pendingMappings.map((m) => ({ id: m.id, title: `${m.prm} → ${m.target.split(" (")[0]}`, sub: `Suggested by the ${m.by}${m.confidence ? ` · ${Math.round(m.confidence * 100)}% confident` : ""}${m.caution ? " · check the warning" : ""}`, href: "/v/mappings", kind: "mapping" as const })),
@@ -349,7 +351,7 @@ export function useAdmin() {
     ]
     const people = state.staff.filter((u) => u.status !== "deactivated").length
     const provisioned = state.groups.filter((g) => g.status === "mapped").reduce((n, g) => n + g.people, 0)
-    return { tasks, pendingMappings, requested, newGroups, leavers, merge, retrying, writes: state.crmWrites, people, provisioned }
+    return { tasks, support, pendingMappings, requested, newGroups, leavers, merge, retrying, writes: state.crmWrites, people, provisioned }
   }, [state])
 }
 

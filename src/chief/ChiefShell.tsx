@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react"
+import { PlatformBanner } from "@/components/PlatformBanner"
 import { ArrowUp, Bell, Gauge, Home, Inbox, KeyRound, LogOut, Moon, PieChart, Route, Search, Sparkles, Sun, Users } from "lucide-react"
 import { Logo } from "@/components/common"
 import { Button } from "@/components/ui/button"
@@ -233,7 +234,7 @@ function ShellInner({ section, children, onSignOut }: { section: string; childre
             <ChiefSearch autoFocus onDone={() => setSearching(false)} />
           </SheetContent>
         </Sheet>
-        <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16">{children}</main>
+        <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16"><PlatformBanner />{children}</main>
       </div>
 
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
