@@ -1,4 +1,5 @@
 import { useState, type ComponentProps, type ReactNode } from "react"
+import { PlatformBanner } from "@/components/PlatformBanner"
 import { Activity, Bell, Briefcase, Home, Inbox, LogOut, Moon, PieChart, Route, Search, Sparkles, Sun, Users } from "lucide-react"
 import { useTheme } from "@/lib/theme"
 import { Logo, SalesforceMark } from "@/components/common"
@@ -228,7 +229,7 @@ export function AppShell({ section, children, onSignOut }: { section: string; ch
           </SheetContent>
         </Sheet>
 
-        <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16">{children}</main>
+        <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16"><PlatformBanner />{children}</main>
       </div>
 
       {/* Mobile bottom navigation: the PAM mostly works from a phone */}

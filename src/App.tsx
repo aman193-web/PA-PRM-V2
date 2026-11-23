@@ -25,6 +25,8 @@ import { PartnerApp } from "@/partner/PartnerApp"
 import { ChiefApp } from "@/chief/ChiefApp"
 import { VendorApp } from "@/vendor/VendorApp"
 import { vendorRoles, type VendorRoleId } from "@/vendor/data"
+import { SuperApp } from "@/superadmin/SuperApp"
+import { SuperLogin } from "@/superadmin/SuperLogin"
 
 function Routes({ onSignOut }: { onSignOut: () => void }) {
   const { parts } = useRoute()
@@ -82,7 +84,7 @@ function Routes({ onSignOut }: { onSignOut: () => void }) {
 
 const roleSlug: Record<DemoRole, string> = {
   pam: "partner-manager", chief: "channel-chief", revops: "revops", ae: "field-seller", ceo: "cfo", cro: "cro", it: "it-admin", aisup: "ai-supervisor",
-  pexec: "partner-executive", rep: "partner-sales-rep", mkt: "partner-marketer", tech: "partner-technical-lead", techr: "ridgeway-technical-lead",
+  pexec: "partner-executive", rep: "partner-sales-rep", mkt: "partner-marketer", tech: "partner-technical-lead", techr: "ridgeway-technical-lead", super: "super-admin",
 }
 
 /** RevOps, the field seller, the CFO, the CRO, IT and the AI supervisor share one Brightline app under #/v/. */
@@ -97,8 +99,9 @@ export default function App() {
   useEffect(() => {
     if (path === "/login") go("/signin/pam")
     else if (!role) { if (path !== "/welcome" && !path.startsWith("/signin/")) go("/welcome") }
-    else if (role === "pam") { if (path === "/" || path === "/welcome" || path.startsWith("/signin/") || path.startsWith("/p/") || path.startsWith("/c/")) go("/home") }
+    else if (role === "pam") { if (path === "/" || path === "/welcome" || path.startsWith("/signin/") || path.startsWith("/p/") || path.startsWith("/c/") || path.startsWith("/s/")) go("/home") }
     else if (role === "chief") { if (!path.startsWith("/c/")) go("/c/home") }
+    else if (role === "super") { if (!path.startsWith("/s/")) go("/s/home") }
     else if (isVendor(role)) { if (!path.startsWith("/v/")) go("/v/home") }
     else if (!path.startsWith("/p/")) go("/p/home")
   }, [role, path])
@@ -114,7 +117,7 @@ export default function App() {
 
   const signIn = (r: DemoRole, to?: string) => {
     setRole(r)
-    go(to ?? (r === "pam" ? "/home" : r === "chief" ? "/c/home" : isVendor(r) ? "/v/home" : "/p/home"))
+    go(to ?? (r === "pam" ? "/home" : r === "chief" ? "/c/home" : r === "super" ? "/s/home" : isVendor(r) ? "/v/home" : "/p/home"))
   }
   const signOut = () => {
     setRole(null)
@@ -126,6 +129,7 @@ export default function App() {
     const who = parts[0] === "signin" ? (parts[1] as DemoRole) : null
     if (who === "pam") screen = <Login onSignIn={(to) => signIn("pam", to)} onBack={() => go("/welcome")} />
     else if (who === "chief") screen = <Login key="chief" variant="chief" onSignIn={() => signIn("chief")} onBack={() => go("/welcome")} />
+    else if (who === "super") screen = <SuperLogin onSignIn={() => signIn("super")} onBack={() => go("/welcome")} />
     else if (isVendor(who)) screen = <Login key={who} variant={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
     else if (who === "pexec" || who === "rep" || who === "mkt" || who === "tech" || who === "techr") screen = <PartnerLogin persona={who} onSignIn={() => signIn(who)} onBack={() => go("/welcome")} />
     else screen = <Welcome onPick={(r) => signIn(r)} />
@@ -133,6 +137,8 @@ export default function App() {
     screen = <Routes onSignOut={signOut} />
   } else if (role === "chief") {
     screen = <ChiefApp onSignOut={signOut} />
+  } else if (role === "super") {
+    screen = <SuperApp onSignOut={signOut} />
   } else if (isVendor(role)) {
     screen = <VendorApp role={role} onSignOut={signOut} />
   } else {

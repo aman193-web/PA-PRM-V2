@@ -19,6 +19,8 @@ import {
   auditSeed, connectionsSeed, groupsSeed, itFeedSeed, mappingsSeed, staffSeed,
   type AuditEntry, type Connection, type FieldMapping, type GroupMap, type StaffUser,
 } from "@/vendor/admin"
+import * as sa from "@/superadmin/data"
+import type { Announcement, DataRequest, Org, PlatformAudit, SupportAccess, TeamMember as PlatformMember } from "@/superadmin/data"
 import {
   actionKey, agentLogSeed, agentRoster, aisupFeedSeed, initialActionLevels, initialAgentLevels, initialAgentModels, modelName, type AgentLogEntry,
 } from "@/vendor/agents"
@@ -103,6 +105,32 @@ export interface State {
   /** Which approved AI model each agent runs on, and the default for anything new. */
   agentModels: Record<string, string>
   defaultModel: string
+  /* Super admin: the PRM company's platform team, above every tenant */
+  platform: PlatformState
+}
+
+export interface PlatformState {
+  orgs: Org[]
+  invoices: sa.Invoice[]
+  flags: sa.Flag[]
+  releases: sa.Release[]
+  providers: sa.Provider[]
+  policies: sa.Policy[]
+  events: sa.SecurityEvent[]
+  support: SupportAccess[]
+  incidents: sa.Incident[]
+  announcements: Announcement[]
+  dataRequests: DataRequest[]
+  team: PlatformMember[]
+  audit: PlatformAudit[]
+  /** Per-user platform actions, keyed by email. */
+  userFlags: Record<string, { locked?: boolean; mfaReset?: string; signedOut?: string }>
+  /** Changes to the default role templates, keyed "permission.role". */
+  permOverrides: Record<string, string>
+  /** Stops every agent for every tenant. */
+  aiPaused: boolean
+  /** Read-only mode for every tenant during maintenance. */
+  maintenance: boolean
 }
 
 const initial: State = {
@@ -192,6 +220,12 @@ const initial: State = {
   aisupFeed: aisupFeedSeed,
   agentModels: initialAgentModels,
   defaultModel: "sonnet",
+  platform: {
+    orgs: sa.orgsSeed, invoices: sa.invoicesSeed, flags: sa.flagsSeed, releases: sa.releasesSeed, providers: sa.providersSeed,
+    policies: sa.policiesSeed, events: sa.securityEventsSeed, support: sa.supportSeed, incidents: sa.incidentsSeed,
+    announcements: sa.announcementsSeed, dataRequests: sa.dataRequestsSeed, team: sa.teamSeed, audit: sa.platformAuditSeed,
+    userFlags: {}, permOverrides: {}, aiPaused: false, maintenance: false,
+  },
   agentLevels: { ...Object.fromEntries(agentSeed.map((a) => [a.id, a.level])), ...initialAgentLevels },
   chiefFeed: [
     { id: "cf1", at: "2026-10-28T10:20:00", text: "Kestrel Energy passed 80% of its review deadline with Jordan Lee", href: "/c/approval/reg-REG-2038" },
@@ -289,6 +323,29 @@ type Action =
   | { type: "aiReview"; id: string }
   | { type: "aiSetModel"; agent: string; model: string }
   | { type: "aiSetDefaultModel"; model: string }
+  // Super admin (platform team)
+  | { type: "saCreateOrg"; org: Org }
+  | { type: "saOrgStatus"; id: string; status: Org["status"]; reason: string }
+  | { type: "saPlan"; id: string; plan: Org["plan"] }
+  | { type: "saAiCap"; id: string; cap: number }
+  | { type: "saFlag"; flag: string; orgId: string; on: boolean }
+  | { type: "saRollout"; version: string; pct: number }
+  | { type: "saAiPause" }
+  | { type: "saProvider"; id: string; status: sa.Provider["status"] }
+  | { type: "saPolicy"; id: string; value: string | boolean }
+  | { type: "saEvent"; id: string }
+  | { type: "saSupportRequest"; req: SupportAccess }
+  | { type: "saSupportEnd"; id: string }
+  | { type: "itSupportDecide"; id: string; approve: boolean }
+  | { type: "saAnnounce"; a: Announcement }
+  | { type: "saAnnounceEnd"; id: string }
+  | { type: "saMaintenance" }
+  | { type: "saIncident"; id: string; status: sa.Incident["status"] }
+  | { type: "saDataRequest"; id: string; status: DataRequest["status"] }
+  | { type: "saUser"; email: string; name: string; action: "lock" | "unlock" | "resetMfa" | "signOut" }
+  | { type: "saPerm"; key: string; cell: string }
+  | { type: "saInvite"; member: PlatformMember }
+  | { type: "saInvoice"; id: string; action: "paid" | "remind" }
 
 const stamp = () => NOW.toISOString()
 const log = (s: State, text: string, href?: string): ActivityItem[] => [
@@ -317,6 +374,17 @@ const item = (list: ActivityItem[], text: string, href?: string): ActivityItem[]
 /** The partner company a technical lead works for, from the deals they're on (Raj at Northpeak, Theo at Ridgeway). */
 const companyOfLead = (s: State, person: string) => s.engagements.find((e) => e.person === person)?.companyId ?? "northpeak"
 const daysTo = (iso: string) => Math.ceil((new Date(`${iso}T12:00:00`).getTime() - NOW.getTime()) / 86_400_000)
+
+/** Applies a platform change and writes it to the platform audit log (and Brightline's, when it touches Brightline). */
+function plat(s: State, patch: Partial<PlatformState>, text: string, orgId?: string): State {
+  const at = stamp()
+  const entry: PlatformAudit = { id: `PA-${411 + s.platform.audit.length}`, at, actor: "Rowan Ellis", text, orgId }
+  return {
+    ...s,
+    platform: { ...s.platform, ...patch, audit: [entry, ...s.platform.audit] },
+    audit: orgId === "brightline" ? [{ id: `AU-${5121 + s.audit.length - auditSeed.length}`, at, actor: "Rowan Ellis (PRM platform team)", kind: "person", area: "Access", text }, ...s.audit] : s.audit,
+  }
+}
 
 /** Role-based split (the launch default suggested in D8): role weights, normalised to 100. */
 export function modelSplit(lines: { partnerId: string; role: PartnerRole }[]): CreditLine[] {
@@ -1103,6 +1171,101 @@ function core(s: State, a: Action): State {
         chiefFeed: chiefLog(s, `${AISUP} (AI supervisor) moved the ${agentName(a.agent)} to ${modelName(a.model)}`, "/c/program"),
       }
     }
+    /* ---------- super admin ---------- */
+    case "saCreateOrg": return plat(s, { orgs: [...s.platform.orgs, a.org], flags: s.platform.flags.map((f) => ({ ...f, on: { ...f.on, [a.org.id]: f.plans.includes(a.org.plan) } })) }, `Created organization ${a.org.name} (${sa.planName(a.org.plan)}, ${a.org.region}) and invited ${a.org.admin} as its admin`, a.org.id)
+    case "saOrgStatus": {
+      const o = s.platform.orgs.find((x) => x.id === a.id)!
+      const verb = a.status === "suspended" ? "Suspended" : "Reactivated"
+      return plat(s, { orgs: s.platform.orgs.map((x) => (x.id === a.id ? { ...x, status: a.status, note: a.status === "suspended" ? `Suspended: ${a.reason}` : undefined, health: a.status === "suspended" ? "bad" : "good" } : x)) }, `${verb} ${o.name}${a.reason ? `: ${a.reason}` : ""}`, o.id)
+    }
+    case "saPlan": {
+      const o = s.platform.orgs.find((x) => x.id === a.id)!
+      const plan = sa.plans.find((p) => p.id === a.plan)!
+      return plat(s, { orgs: s.platform.orgs.map((x) => (x.id === a.id ? { ...x, plan: a.plan, mrr: x.status === "trial" ? 0 : plan.monthly } : x)) }, `Moved ${o.name} from ${sa.planName(o.plan)} to ${plan.name}`, o.id)
+    }
+    case "saAiCap": {
+      const o = s.platform.orgs.find((x) => x.id === a.id)!
+      return plat(s, { orgs: s.platform.orgs.map((x) => (x.id === a.id ? { ...x, aiCap: a.cap } : x)) }, `Set ${o.name}'s monthly AI cap to $${a.cap.toLocaleString("en-US")}`, o.id)
+    }
+    case "saFlag": {
+      const f = s.platform.flags.find((x) => x.id === a.flag)!
+      const all = a.orgId === "all"
+      const on = all ? Object.fromEntries(s.platform.orgs.map((o) => [o.id, a.on])) : { ...f.on, [a.orgId]: a.on }
+      const who = all ? "every tenant" : s.platform.orgs.find((o) => o.id === a.orgId)!.name
+      return plat(s, { flags: s.platform.flags.map((x) => (x.id === a.flag ? { ...x, on } : x)) }, `${a.on ? "Turned on" : "Turned off"} ${f.name} for ${who}`, all ? undefined : a.orgId)
+    }
+    case "saRollout":
+      return plat(s, { releases: s.platform.releases.map((r) => (r.version === a.version ? { ...r, rollout: a.pct, status: a.pct >= 100 ? "live" : a.pct > 0 ? "rolling" : r.status } : r)) }, `Rolled release ${a.version} out to ${a.pct}% of tenants`)
+    case "saAiPause": {
+      const pause = !s.platform.aiPaused
+      const next = plat(s, { aiPaused: pause }, pause ? "Paused every AI agent for every tenant (platform kill switch)" : "Turned AI agents back on for every tenant")
+      return {
+        ...next,
+        agentLayerPaused: pause,
+        aisupFeed: item(s.aisupFeed, pause ? "The PRM platform team paused every AI agent, for all customers" : "The PRM platform team turned AI agents back on", "/v/agents"),
+        notices: notice(s, pause ? "AI agents are paused by the PRM platform team" : "AI agents are back on", pause ? "A platform-wide pause. You decide everything by hand for now; the rules still approve clean deals." : "Recommendations, reminders and checks are running again.", "/queue", pause ? "warn" : "info"),
+      }
+    }
+    case "saProvider": {
+      const p = s.platform.providers.find((x) => x.id === a.id)!
+      return plat(s, { providers: s.platform.providers.map((x) => (x.id === a.id ? { ...x, status: a.status } : x)) }, `${a.status === "approved" ? "Approved" : a.status === "blocked" ? "Blocked" : "Sent back to review"} the AI provider ${p.name}`)
+    }
+    case "saPolicy": {
+      const p = s.platform.policies.find((x) => x.id === a.id)!
+      return plat(s, { policies: s.platform.policies.map((x) => (x.id === a.id ? { ...x, value: a.value } : x)) }, `Changed the policy "${p.label}" to ${typeof a.value === "boolean" ? (a.value ? "on" : "off") : a.value}`)
+    }
+    case "saEvent": {
+      const e = s.platform.events.find((x) => x.id === a.id)!
+      return plat(s, { events: s.platform.events.map((x) => (x.id === a.id ? { ...x, status: "resolved" } : x)) }, `Resolved security event ${e.id}`, e.orgId)
+    }
+    case "saSupportRequest": {
+      const o = s.platform.orgs.find((x) => x.id === a.req.orgId)!
+      const next = plat(s, { support: [a.req, ...s.platform.support] }, `Asked ${o.name} for ${a.req.hours}-hour read-only support access for ${a.req.engineer} (${a.req.ticket})`, o.id)
+      return o.id === "brightline" ? { ...next, itFeed: item(s.itFeed, `The PRM platform team asks for read-only support access: ${a.req.reason}`, "/v/users") } : next
+    }
+    case "itSupportDecide": {
+      const r = s.platform.support.find((x) => x.id === a.id)!
+      const until = new Date(NOW.getTime() + r.hours * 3_600_000).toISOString()
+      return {
+        ...s,
+        platform: { ...s.platform, support: s.platform.support.map((x) => (x.id === a.id ? { ...x, status: a.approve ? "granted" : "declined", decidedBy: IT, until: a.approve ? until : undefined } : x)), audit: [{ id: `PA-${411 + s.platform.audit.length}`, at: stamp(), actor: `${IT} (Brightline)`, text: `${a.approve ? "Approved" : "Declined"} support access for ${r.engineer}${a.approve ? `, ${r.hours} hours, read-only` : ""} (${r.ticket})`, orgId: "brightline" }, ...s.platform.audit] },
+        itFeed: item(s.itFeed, `You ${a.approve ? "approved" : "declined"} read-only support access for ${r.engineer} (PRM platform team)`, "/v/users"),
+      }
+    }
+    case "saSupportEnd": {
+      const r = s.platform.support.find((x) => x.id === a.id)!
+      return plat(s, { support: s.platform.support.map((x) => (x.id === a.id ? { ...x, status: "ended" } : x)) }, `Ended support access for ${r.engineer}`, r.orgId)
+    }
+    case "saAnnounce": return plat(s, { announcements: [a.a, ...s.platform.announcements] }, `Published ${a.a.kind === "maintenance" ? "a maintenance notice" : "an announcement"} to ${a.a.audience}: ${a.a.title}`)
+    case "saAnnounceEnd": {
+      const x = s.platform.announcements.find((n) => n.id === a.id)!
+      return plat(s, { announcements: s.platform.announcements.map((n) => (n.id === a.id ? { ...n, status: "ended" } : n)) }, `Took down the announcement: ${x.title}`)
+    }
+    case "saMaintenance": return plat(s, { maintenance: !s.platform.maintenance }, s.platform.maintenance ? "Ended maintenance mode; every tenant can make changes again" : "Turned on maintenance mode: every tenant is read-only")
+    case "saIncident": {
+      const i = s.platform.incidents.find((x) => x.id === a.id)!
+      return plat(s, { incidents: s.platform.incidents.map((x) => (x.id === a.id ? { ...x, status: a.status } : x)) }, `Marked incident ${i.id} as ${a.status}`)
+    }
+    case "saDataRequest": {
+      const d = s.platform.dataRequests.find((x) => x.id === a.id)!
+      return plat(s, { dataRequests: s.platform.dataRequests.map((x) => (x.id === a.id ? { ...x, status: a.status } : x)) }, `${a.status === "done" ? "Completed" : "Started"} data ${d.kind} request ${d.id}`, d.orgId)
+    }
+    case "saUser": {
+      const f = { ...(s.platform.userFlags[a.email] ?? {}) }
+      if (a.action === "lock") f.locked = true
+      if (a.action === "unlock") f.locked = false
+      if (a.action === "resetMfa") f.mfaReset = stamp()
+      if (a.action === "signOut") f.signedOut = stamp()
+      const what = { lock: "Locked", unlock: "Unlocked", resetMfa: "Reset MFA for", signOut: "Signed out everywhere:" }[a.action]
+      return plat(s, { userFlags: { ...s.platform.userFlags, [a.email]: f } }, `${what} ${a.name} (${a.email})`)
+    }
+    case "saPerm": return plat(s, { permOverrides: { ...s.platform.permOverrides, [a.key]: a.cell } }, `Changed the default role template: ${a.key.replace(".", " for ")} is now "${a.cell}"`)
+    case "saInvite": return plat(s, { team: [...s.platform.team, a.member] }, `Invited ${a.member.name} to the platform team as ${a.member.role}`)
+    case "saInvoice": {
+      const inv = s.platform.invoices.find((x) => x.id === a.id)!
+      return plat(s, { invoices: a.action === "paid" ? s.platform.invoices.map((x) => (x.id === a.id ? { ...x, status: "paid" } : x)) : s.platform.invoices }, a.action === "paid" ? `Marked ${inv.id} as paid` : `Sent a payment reminder for ${inv.id}`, inv.orgId)
+    }
+
     case "aiSetDefaultModel":
       return { ...s, defaultModel: a.model, aisupFeed: item(s.aisupFeed, `You made ${modelName(a.model)} the default model`, "/v/models") }
 

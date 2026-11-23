@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { PlatformBanner } from "@/components/PlatformBanner"
 import {
   ArrowUp, Bell, Bot, Building2, Coins, Cpu, Handshake, Home, Inbox, KeyRound, Layers, LogOut, Moon, Presentation, Route, Scale,
   ScrollText, Search, ShieldCheck, Shuffle, Sparkles, Sun, TrendingUp, TriangleAlert, Users, Workflow, Wrench, type LucideIcon,
@@ -33,6 +34,8 @@ function useNav(): NavItem[] {
   const c = useSales()
   const ad = useAdmin()
   const g = useAgents()
+  const { state } = useStore()
+  const cosellOn = !!state.platform.flags.find((f) => f.id === "cosell")?.on.brightline
   if (me.role === "cro")
     return [
       { key: "home", label: "Home", href: "/v/home", icon: Home, mobile: true },
@@ -45,7 +48,7 @@ function useNav(): NavItem[] {
       { key: "home", label: "Home", href: "/v/home", icon: Home, mobile: true },
       { key: "connections", label: "Connections", href: "/v/connections", icon: Workflow, count: ad.requested.length + (ad.merge ? 1 : 0), mobile: true },
       { key: "mappings", label: "Field mappings", short: "Mappings", href: "/v/mappings", icon: Shuffle, count: ad.pendingMappings.length },
-      { key: "users", label: "Users and roles", short: "Users", href: "/v/users", icon: Users, count: ad.newGroups.length + ad.leavers.length, mobile: true },
+      { key: "users", label: "Users and roles", short: "Users", href: "/v/users", icon: Users, count: ad.support.length + ad.newGroups.length + ad.leavers.length, mobile: true },
       { key: "audit", label: "Audit log", short: "Audit", href: "/v/audit", icon: ScrollText, mobile: true },
     ]
   if (me.role === "aisup")
@@ -67,7 +70,7 @@ function useNav(): NavItem[] {
     return [
       { key: "home", label: "Home", href: "/v/home", icon: Home, mobile: true },
       { key: "accounts", label: "My accounts", short: "Accounts", href: "/v/accounts", icon: Building2, count: s.inReview.length, mobile: true },
-      { key: "cosell", label: "Co-sell", href: "/v/cosell", icon: Handshake, count: s.dueSoon.length, mobile: true },
+      ...(cosellOn ? [{ key: "cosell", label: "Co-sell", href: "/v/cosell", icon: Handshake, count: s.dueSoon.length, mobile: true }] : []),
     ]
   return [
     { key: "home", label: "Home", href: "/v/home", icon: Home, mobile: true },
@@ -499,7 +502,7 @@ function ShellInner({ section, children, onSignOut }: { section: string; childre
             <VendorSearch autoFocus onDone={() => setSearching(false)} />
           </SheetContent>
         </Sheet>
-        <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16">{children}</main>
+        <main className="mx-auto w-full max-w-[1240px] px-4 pt-6 pb-28 sm:px-6 lg:px-10 lg:pt-8 lg:pb-16"><PlatformBanner />{children}</main>
       </div>
 
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 grid border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden" style={{ gridTemplateColumns: `repeat(${bar.length}, minmax(0, 1fr))` }}>

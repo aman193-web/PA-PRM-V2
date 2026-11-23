@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { ArrowRight, CheckCircle2, ChevronRight, GitMerge, Plug, ShieldCheck, Shuffle, UserMinus, Users, Workflow } from "lucide-react"
+import { ArrowRight, CheckCircle2, ChevronRight, GitMerge, KeyRound, Plug, ShieldCheck, Shuffle, UserMinus, Users, Workflow } from "lucide-react"
 import { Panel } from "@/components/common"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,8 +12,8 @@ import { securityPackage } from "@/vendor/admin"
 import { useAdmin, useVendor, type ItTask } from "@/vendor/useVendor"
 import { AskBar, Greeting, Recent } from "@/vendor/screens/ops/OpsHome"
 
-export const taskIcon: Record<ItTask["kind"], ReactNode> = { mapping: <Shuffle />, connector: <Plug />, group: <Users />, leaver: <UserMinus />, merge: <GitMerge /> }
-const taskTile: Record<ItTask["kind"], string> = { mapping: "bg-brand-soft text-primary", connector: "bg-amber-soft text-amber-ink", group: "bg-secondary text-foreground", leaver: "bg-bad-soft text-bad", merge: "bg-ok-soft text-ok" }
+export const taskIcon: Record<ItTask["kind"], ReactNode> = { mapping: <Shuffle />, connector: <Plug />, group: <Users />, leaver: <UserMinus />, merge: <GitMerge />, support: <KeyRound /> }
+const taskTile: Record<ItTask["kind"], string> = { mapping: "bg-brand-soft text-primary", connector: "bg-amber-soft text-amber-ink", group: "bg-secondary text-foreground", leaver: "bg-bad-soft text-bad", merge: "bg-ok-soft text-ok", support: "bg-bad-soft text-bad" }
 
 export function TaskRow({ t }: { t: ItTask }) {
   return (

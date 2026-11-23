@@ -1,6 +1,6 @@
-# PRM · twelve-portal prototype
+# PRM · twelve-portal prototype with a super admin panel
 
-A clickable prototype of the PRM with a portal for each of the twelve personas in the BRD. The partner technical lead is shown at both partner companies. Each portal shows only what that person may see and do:
+A clickable prototype of the PRM with a portal for each of the twelve personas in the BRD, plus a super admin panel for the PRM platform team that runs the platform above every customer. The partner technical lead is shown at both partner companies. Each portal shows only what that person may see and do:
 
 | Portal | Person | Routes | Spec |
 |---|---|---|---|
@@ -17,6 +17,7 @@ A clickable prototype of the PRM with a portal for each of the twelve personas i
 | Partner marketer | Priya Raman (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §8 |
 | Partner technical lead | Theo Grant (Ridgeway IT) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §9 |
 | Partner technical lead | Raj Mehta (Northpeak Consulting) | `#/p/…` | [docs/Partner_Portals_Spec.md](docs/Partner_Portals_Spec.md) §9 |
+| Super admin | Rowan Ellis (PRM platform team) | `#/s/…` | [docs/Super_Admin_Spec.md](docs/Super_Admin_Spec.md) |
 
 The app opens on a demo-only **Choose a portal** page.
 

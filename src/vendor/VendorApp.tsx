@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { useStore } from "@/store"
 import { ArrowLeft, Check, KeyRound, Lock, X } from "lucide-react"
 import { EmptyState, PageHeader, Panel } from "@/components/common"
 import { Button } from "@/components/ui/button"
@@ -66,11 +67,11 @@ function VendorAccess() {
   )
 }
 
-function NotForRole({ what, why }: { what: string; why: string }) {
+function NotForRole({ what, why, title = "Not part of your role" }: { what: string; why: string; title?: string }) {
   return (
     <div>
       <PageHeader title={what} />
-      <Panel><EmptyState icon={<Lock className="size-6" />} title="Not part of your role" body={why} action={<Button variant="outline" onClick={() => go("/v/home")}><ArrowLeft /> Home</Button>} /></Panel>
+      <Panel><EmptyState icon={<Lock className="size-6" />} title={title} body={why} action={<Button variant="outline" onClick={() => go("/v/home")}><ArrowLeft /> Home</Button>} /></Panel>
     </div>
   )
 }
@@ -85,12 +86,19 @@ function opsScreen(page: string, id?: string): [string, ReactNode] {
   }
 }
 
+/** Co-sell is a feature the PRM platform team can switch off per customer from the super admin panel. */
+function CoSellGate({ children }: { children: ReactNode }) {
+  const { state } = useStore()
+  if (state.platform.flags.find((f) => f.id === "cosell")?.on.brightline) return <>{children}</>
+  return <NotForRole what="Co-sell" title="Switched off for Brightline" why="The PRM platform team has switched co-sell off for Brightline. Your IT admin can ask them about it." />
+}
+
 function aeScreen(page: string, id?: string): [string, ReactNode] {
   switch (page) {
     case "accounts": return ["accounts", <SellerAccounts />]
     case "account": return ["accounts", <SellerAccount id={id} />]
-    case "cosell": return ["cosell", <CoSellList />]
-    case "find": return ["find", <FindPartner key={id ?? "pick"} accountId={id} />]
+    case "cosell": return ["cosell", <CoSellGate><CoSellList /></CoSellGate>]
+    case "find": return ["find", <CoSellGate><FindPartner key={id ?? "pick"} accountId={id} /></CoSellGate>]
     case "approvals": case "approval": case "exceptions": case "programs": return ["home", <NotForRole what="Approvals and rules" why="Registrations are decided by the partner manager, and program rules by the channel chief. You see partner activity on your accounts." />]
     default: return ["home", <AeHome />]
   }

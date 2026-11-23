@@ -1,12 +1,12 @@
 import { useState } from "react"
-import { Building2, ChevronRight, ExternalLink, FlaskConical, KeyRound, Library, Loader2, Moon, Store, Sun } from "lucide-react"
+import { Building2, ChevronRight, ExternalLink, FlaskConical, KeyRound, Library, Loader2, Moon, ShieldCheck, Store, Sun } from "lucide-react"
 import { KNOWLEDGE_HUB, Logo } from "@/components/common"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "@/lib/theme"
 import { go } from "@/lib/router"
 import { cn } from "@/lib/utils"
 
-export type DemoRole = "pam" | "chief" | "revops" | "ae" | "ceo" | "cro" | "it" | "aisup" | "pexec" | "rep" | "mkt" | "tech" | "techr"
+export type DemoRole = "pam" | "chief" | "revops" | "ae" | "ceo" | "cro" | "it" | "aisup" | "pexec" | "rep" | "mkt" | "tech" | "techr" | "super"
 
 interface RoleCard {
   id: DemoRole
@@ -41,6 +41,12 @@ const sides: { key: string; label: string; org: string; icon: typeof Building2; 
       { id: "mkt", name: "Priya Raman", initials: "PR", role: "Partner marketer", org: "Ridgeway IT", job: "Runs campaigns and requests marketing funds", tint: "bg-ok-soft text-ok" },
       { id: "techr", name: "Theo Grant", initials: "TG", role: "Partner technical lead", org: "Ridgeway IT", job: "Runs demos and pilots and logs delivery for credit", tint: "bg-secondary text-foreground" },
       { id: "tech", name: "Raj Mehta", initials: "RM", role: "Partner technical lead", org: "Northpeak Consulting", job: "Gets certified and logs delivery for credit", tint: "bg-secondary text-foreground" },
+    ],
+  },
+  {
+    key: "platform", label: "Platform", org: "PRM platform team", icon: ShieldCheck,
+    roles: [
+      { id: "super", name: "Rowan Ellis", initials: "RE", role: "Super admin", org: "PRM platform team", job: "Runs the platform above every customer", tint: "bg-[#1b2437] text-[#ffb359] dark:bg-[#2a3550]" },
     ],
   },
 ]
@@ -96,12 +102,22 @@ export function Welcome({ onPick }: { onPick: (r: DemoRole) => void }) {
       </header>
 
       <main className="mx-auto w-full max-w-[1320px] flex-1 px-4 py-6 sm:px-8 sm:py-8">
-        <h1 className="text-[26px] leading-tight font-bold sm:text-[28px]">Choose a portal</h1>
-        <p className="mt-1 text-[15.5px] text-muted-foreground">Pick a role to sign in. What you do in one portal shows up in the others.</p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-[26px] leading-tight font-bold sm:text-[28px]">Choose a portal</h1>
+            <p className="mt-1 text-[15.5px] text-muted-foreground">Pick a role to sign in. What you do in one portal shows up in the others.</p>
+          </div>
+          {/* The platform team sits above every customer, so its card sits above both sides. */}
+          {sides.filter((s) => s.key === "platform").map((s) => (
+            <section key={s.key} aria-label={`${s.label} · ${s.org}, above every customer`} className="w-full lg:max-w-[460px]">
+              <ul>{s.roles.map((c) => <Row key={c.id} c={c} busy={busy} onPick={pick} showOrg />)}</ul>
+            </section>
+          ))}
+        </div>
 
         <div className="mt-5 grid items-start gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1.2fr)]">
-          {sides.map((s) => (
-            <section key={s.key} className={cn("rounded-[16px] border bg-surface-2/60 p-3 sm:p-4", s.key === "vendor" && "lg:col-span-1")}>
+          {sides.filter((s) => s.key !== "platform").map((s) => (
+            <section key={s.key} className="rounded-[16px] border bg-surface-2/60 p-3 sm:p-4">
               <h2 className="mb-2.5 flex items-baseline gap-2 px-1">
                 <s.icon className="size-4 translate-y-0.5 text-muted-foreground" />
                 <span className="shrink-0 text-[16px] font-semibold">{s.label}</span>
